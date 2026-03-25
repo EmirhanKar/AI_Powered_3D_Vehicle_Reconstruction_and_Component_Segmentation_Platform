@@ -1,4 +1,6 @@
 import asyncio
+import sys
+from os.path import abspath , dirname , join
 from logging.config import fileConfig
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import Connection, engine_from_config, pool
@@ -6,6 +8,9 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from app.database.models import *
 from app.database.db import Base
+
+sys.path.insert(0, abspath(join(dirname(__file__), '..')))
+
 
 config = context.config
 

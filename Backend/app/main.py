@@ -1,28 +1,31 @@
-from fastapi import FastAPI, Depends,HTTPException
-from pydantic import BaseModel
-from typing import List , Annotated
-from Backend.app.database.models.user import User
-from database.db import SessionLocal, engine
-from sqlalchemy.orm import Session
-from database import models
+from fastapi import FastAPI
+from contextlib import asynccontextmanager
+from app.database.db import init_db
+from app.api.routers import user_router
+from app.database.models import Modification , Jant , Scans , User , UserStats , Subscription , ScanImage , processed_model
 
-app = FastAPI()
-models.Base.metadata.create_all(bind=engine)
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-        
-db_dependency = Annotated[Session, Depends(get_db)]
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Veritabanı tabloları oluşturuluyor...")
+    await init_db()
+    yield
     
-@app.post("/users/")
-async def create_user(user: User , db: db_dependency):
-    db_user = models.User(name=user.name, email=user.email, password=user.password)
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
-        
+    print ("Uygulama kapanıyor...")
+    
+app = FastAPI(
+    title="MODIF-AI API",
+    description="Araç Modifikasyonu Uygulaması Backend Servisi",
+    version ="1.0.0",
+    lifespan=lifespan
+    )
+
+app.include_router(user_router.router, prefix="/users", tags=["Kullanıcı İşlemleri"])
+
+@app.get("/")
+async def root():
+    return {
+        "status" : "online",
+        "message" : "MODIF-AI API'ye hoş geldiniz!",
+        "docs" : "/docs"
+    }

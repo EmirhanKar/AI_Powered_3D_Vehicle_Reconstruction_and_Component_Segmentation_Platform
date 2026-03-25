@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String 
 from sqlalchemy.orm import relationship
 
-from app.database.db import Base
+from app.database.base import Base
 
 class User(Base):
     __tablename__ = "users"
@@ -10,6 +10,6 @@ class User(Base):
     email = Column(String, unique=True)
     password = Column(String)
     
-    UserStats = relationship("UserStats", back_populates="user", uselist=False) 
-
+    userstats = relationship("UserStats", back_populates="user", uselist=False) 
+    subscriptions = relationship("Subscription", back_populates="user")
 

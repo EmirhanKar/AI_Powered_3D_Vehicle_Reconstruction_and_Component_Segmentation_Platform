@@ -1,8 +1,8 @@
-import datetime
+from datetime import datetime,timezone
 
-from app.database.db import Base
+from app.database.base import Base
 from sqlalchemy import Date, DateTime ,ForeignKey ,Column, Integer, String
-
+from sqlalchemy.orm import relationship
 
 class Subscription(Base):
     __tablename__ = 'subscriptions'
@@ -10,5 +10,7 @@ class Subscription(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey('users.id'), index=True)  
     tier = Column(String, index=True)
-    start_date = Column(DateTime, default = datetime.utcnow)
-    end_date = Column(DateTime, default=datetime.utcnow)
+    start_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    end_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    user = relationship("User", back_populates="subscriptions")

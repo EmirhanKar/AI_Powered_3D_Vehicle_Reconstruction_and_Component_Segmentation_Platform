@@ -1,6 +1,7 @@
-from app.database.db import Base
+from app.database.base import Base
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship 
+
 
 class Jant(Base):
     __tablename__ = 'jant'
@@ -10,5 +11,5 @@ class Jant(Base):
     category = Column(String, index=True)
     image_url = Column(String)
     
-    modifications = relationship("modification", back_populates="jant_models", cascade="all, delete-orphan")    
+    modifications = relationship("Modification", back_populates="jant", cascade="all, delete-orphan")    
     
