@@ -1,4 +1,21 @@
 import bcrypt
+import os
+from datetime import datetime, timedelta, timezone
+from jose import jwt
+from dotenv import load_dotenv
+
+TOKEN = os.getenv("MY_TOKEN")
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(minutes=30)
+    to_encode.update({"exp": expire})
+    
+    encoded_jwt = jwt.encode(to_encode, TOKEN, algorithm="HS256")
+    
+    return encoded_jwt
+
+
 
 def get_password_hash(password: str) -> str:
     
