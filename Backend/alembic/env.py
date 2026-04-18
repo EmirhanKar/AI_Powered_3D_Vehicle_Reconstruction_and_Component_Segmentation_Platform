@@ -2,14 +2,18 @@ import asyncio
 import sys
 from os.path import abspath , dirname , join
 from logging.config import fileConfig
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 sys.path.insert(0, abspath(join(dirname(__file__), '..')))  
 
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy import Connection, engine_from_config, pool
-from sqlalchemy.ext.asyncio import async_engine_from_config
+from sqlalchemy import Connection
+
 from alembic import context
-from app.database.models import Scans, ScanImage, ProcessedModel, Modification, User, Community, UserStats, Subscription
+from app.database.models import *
 from app.database.base import Base
 
 
@@ -19,7 +23,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", "postgresql+asyncpg://postgres:1234@localhost:5432/modifai")
+config.set_main_option("sqlalchemy.url", os.getenv("DB_URL"))
 
 target_metadata = Base.metadata
 
@@ -69,4 +73,14 @@ async def run_migrations_online():
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    asyncio.run(run_migrations_online())
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    if loop.is_running():
+        # Eğer bir loop varsa (ki bazen uvicorn varken olabilir) task olarak ekle
+        asyncio.ensure_future(run_migrations_online())
+    else:
+        loop.run_until_complete(run_migrations_online())

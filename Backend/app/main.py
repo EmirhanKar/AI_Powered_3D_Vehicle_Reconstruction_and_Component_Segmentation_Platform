@@ -30,7 +30,7 @@ for directory in UPLOAD_DIRS:
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 
-app.include_router(user_router.router, prefix="/users", tags=["Kullanıcı İşlemleri"])
+app.include_router(user_router.router,tags=["Kullanıcı İşlemleri"])
 
 app.include_router(upload_image_router.router, tags=["Scans"])
 
