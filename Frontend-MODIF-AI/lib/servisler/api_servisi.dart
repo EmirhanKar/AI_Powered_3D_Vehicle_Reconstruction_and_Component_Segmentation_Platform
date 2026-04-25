@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'auth_servisi.dart';
+import '../config.dart'; // baseUrl buradan geliyor
 import '../modeller/kullanici_model.dart';
 import '../modeller/scan_model.dart';
 import '../modeller/community_model.dart';
@@ -10,23 +11,17 @@ import '../modeller/magaza_model.dart';
 import '../modeller/draft_model.dart';
 
 class ApiServisi {
-  static const String baseUrl = "http://192.168.1.194:8000";
-  static const Duration _timeout = Duration(seconds: 15);
+  // baseUrl artık AppConfig'den geliyor
+  static String get baseUrl => AppConfig.baseUrl;
+  static Duration get _timeout => AppConfig.defaultTimeout;
+
   final AuthServisi _auth = AuthServisi();
 
   // ═══════════════════════════════════════════════════
   //  YARDIMCI METOTLAR
   // ═══════════════════════════════════════════════════
 
-  /// Backend'den dönen dosya yollarını tam URL'ye çevirir.
-  /// Örn: "uploads/thumbnails/1/thumb_5.jpg" → "http://…/uploads/thumbnails/1/thumb_5.jpg"
-  static String? buildImageUrl(String? path) {
-    if (path == null || path.isEmpty) return null;
-    if (path.startsWith('http')) return path; // Zaten tam URL ise dokunma
-    // Baştaki slash varsa kaldır
-    final cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    return '$baseUrl/$cleanPath';
-  }
+  static String? buildImageUrl(String? path) => AppConfig.buildImageUrl(path);
 
   Future<Map<String, String>> _authHeaders({String? contentType}) async {
     final headers = await _auth.getAuthHeaders();
@@ -38,23 +33,24 @@ class ApiServisi {
   //  KULLANICI İŞLEMLERİ (AUTH)
   // ═══════════════════════════════════════════════════
 
-  /// Yeni kullanıcı kaydı. Başarılıysa UserResponse döner.
   Future<Kullanici> kayitOl({
     required String name,
     required String surname,
     required String email,
     required String password,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/users/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'name': name,
-        'surname': surname,
-        'email': email,
-        'password': password,
-      }),
-    ).timeout(_timeout);
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/users/register'),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({
+            'name': name,
+            'surname': surname,
+            'email': email,
+            'password': password,
+          }),
+        )
+        .timeout(_timeout);
 
     if (response.statusCode == 201) {
       return Kullanici.fromJson(json.decode(response.body));
@@ -65,15 +61,19 @@ class ApiServisi {
     }
   }
 
-  /// OAuth2 form ile giriş. Token döner ve AuthServisi'ne kaydeder.
   Future<String> girisYap(String email, String sifre) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/users/login'),
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: {'username': email, 'password': sifre},
-    ).timeout(_timeout, onTimeout: () {
-      throw Exception('Sunucuya ulaşılamadı (Zaman aşımı)');
-    });
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/users/login'),
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: {'username': email, 'password': sifre},
+        )
+        .timeout(
+          _timeout,
+          onTimeout: () {
+            throw Exception('Sunucuya ulaşılamadı (Zaman aşımı)');
+          },
+        );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -87,13 +87,11 @@ class ApiServisi {
     }
   }
 
-  /// Giriş yapmış kullanıcının profil bilgilerini getirir.
   Future<Kullanici> beniBilgileriniGetir() async {
     final headers = await _authHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/users/me'),
-      headers: headers,
-    ).timeout(_timeout);
+    final response = await http
+        .get(Uri.parse('$baseUrl/users/me'), headers: headers)
+        .timeout(_timeout);
 
     if (response.statusCode == 200) {
       return Kullanici.fromJson(json.decode(response.body));
@@ -104,7 +102,6 @@ class ApiServisi {
     }
   }
 
-  /// Profil bilgilerini günceller.
   Future<Kullanici> profilGuncelle({
     String? name,
     String? surname,
@@ -118,11 +115,13 @@ class ApiServisi {
     if (email != null) body['email'] = email;
     if (password != null) body['password'] = password;
 
-    final response = await http.patch(
-      Uri.parse('$baseUrl/users/me'),
-      headers: headers,
-      body: json.encode(body),
-    ).timeout(_timeout);
+    final response = await http
+        .patch(
+          Uri.parse('$baseUrl/users/me'),
+          headers: headers,
+          body: json.encode(body),
+        )
+        .timeout(_timeout);
 
     if (response.statusCode == 200) {
       return Kullanici.fromJson(json.decode(response.body));
@@ -131,7 +130,6 @@ class ApiServisi {
     }
   }
 
-  /// Profil fotoğrafı yükler.
   Future<Kullanici> profilFotoYukle(XFile photo) async {
     final token = await _auth.getToken();
     final request = http.MultipartRequest(
@@ -155,8 +153,6 @@ class ApiServisi {
   //  TARAMA / GARAJ İŞLEMLERİ
   // ═══════════════════════════════════════════════════
 
-  /// Fotoğraf yükleyip yeni tarama oluşturur.
-  /// [files] = seçilen fotoğraflar, [method] = "2d" veya "3d"
   Future<Scan> fotografYukle({
     required List<XFile> files,
     required String carName,
@@ -178,7 +174,7 @@ class ApiServisi {
     }
 
     final streamedResponse = await request.send().timeout(
-      const Duration(seconds: 60), // Fotoğraf yükleme için uzun timeout
+      AppConfig.uploadTimeout,
     );
     final response = await http.Response.fromStream(streamedResponse);
 
@@ -194,13 +190,11 @@ class ApiServisi {
     }
   }
 
-  /// Kullanıcının tamamlanmış garaj araçlarını listeler.
   Future<List<Scan>> garajiGetir() async {
     final headers = await _authHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/scans/garage'),
-      headers: headers,
-    ).timeout(_timeout);
+    final response = await http
+        .get(Uri.parse('$baseUrl/scans/garage'), headers: headers)
+        .timeout(_timeout);
 
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
@@ -210,13 +204,11 @@ class ApiServisi {
     }
   }
 
-  /// Tek bir taramanın detayını getirir.
   Future<Scan> scanDetayGetir(int scanId) async {
     final headers = await _authHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/scans/$scanId'),
-      headers: headers,
-    ).timeout(_timeout);
+    final response = await http
+        .get(Uri.parse('$baseUrl/scans/$scanId'), headers: headers)
+        .timeout(_timeout);
 
     if (response.statusCode == 200) {
       return Scan.fromJson(json.decode(response.body));
@@ -225,13 +217,11 @@ class ApiServisi {
     }
   }
 
-  /// Taramayı siler.
   Future<void> scanSil(int scanId) async {
     final headers = await _authHeaders();
-    final response = await http.delete(
-      Uri.parse('$baseUrl/scans/$scanId'),
-      headers: headers,
-    ).timeout(_timeout);
+    final response = await http
+        .delete(Uri.parse('$baseUrl/scans/$scanId'), headers: headers)
+        .timeout(_timeout);
 
     if (response.statusCode != 200) {
       throw Exception('Silme hatası: ${response.statusCode}');
@@ -242,16 +232,14 @@ class ApiServisi {
   //  EKLENTİLER (PLUGINS)
   // ═══════════════════════════════════════════════════
 
-  /// Tüm jantları listeler. Opsiyonel kategori filtresi.
   Future<List<JantModel>> jantlariGetir({String? category}) async {
     final headers = await _authHeaders();
     String url = '$baseUrl/plugins/jants';
     if (category != null) url += '?category=$category';
 
-    final response = await http.get(
-      Uri.parse(url),
-      headers: headers,
-    ).timeout(_timeout);
+    final response = await http
+        .get(Uri.parse(url), headers: headers)
+        .timeout(_timeout);
 
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
@@ -261,13 +249,11 @@ class ApiServisi {
     }
   }
 
-  /// Tüm renkleri listeler.
   Future<List<RenkModel>> renkleriGetir() async {
     final headers = await _authHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/plugins/colors'),
-      headers: headers,
-    ).timeout(_timeout);
+    final response = await http
+        .get(Uri.parse('$baseUrl/plugins/colors'), headers: headers)
+        .timeout(_timeout);
 
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
@@ -281,13 +267,11 @@ class ApiServisi {
   //  TOPLULUK (COMMUNITY)
   // ═══════════════════════════════════════════════════
 
-  /// Keşfet feed'ini getirir.
   Future<List<FeedItem>> feedGetir() async {
     final headers = await _authHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/community/feed'),
-      headers: headers,
-    ).timeout(_timeout);
+    final response = await http
+        .get(Uri.parse('$baseUrl/community/feed'), headers: headers)
+        .timeout(_timeout);
 
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
@@ -297,13 +281,11 @@ class ApiServisi {
     }
   }
 
-  /// Beğeni toggle (beğen / geri al).
   Future<Map<String, dynamic>> begeniToggle(int scanId) async {
     final headers = await _authHeaders();
-    final response = await http.post(
-      Uri.parse('$baseUrl/community/$scanId/like'),
-      headers: headers,
-    ).timeout(_timeout);
+    final response = await http
+        .post(Uri.parse('$baseUrl/community/$scanId/like'), headers: headers)
+        .timeout(_timeout);
 
     if (response.statusCode == 200) {
       return json.decode(response.body);
@@ -312,13 +294,11 @@ class ApiServisi {
     }
   }
 
-  /// Bir aracın yorumlarını listeler.
   Future<List<Yorum>> yorumlariGetir(int scanId) async {
     final headers = await _authHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/community/$scanId/comments'),
-      headers: headers,
-    ).timeout(_timeout);
+    final response = await http
+        .get(Uri.parse('$baseUrl/community/$scanId/comments'), headers: headers)
+        .timeout(_timeout);
 
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
@@ -328,14 +308,15 @@ class ApiServisi {
     }
   }
 
-  /// Yorum ekler.
   Future<Yorum> yorumEkle(int scanId, String content) async {
     final headers = await _authHeaders(contentType: 'application/json');
-    final response = await http.post(
-      Uri.parse('$baseUrl/community/$scanId/comments'),
-      headers: headers,
-      body: json.encode({'content': content}),
-    ).timeout(_timeout);
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/community/$scanId/comments'),
+          headers: headers,
+          body: json.encode({'content': content}),
+        )
+        .timeout(_timeout);
 
     if (response.statusCode == 201) {
       return Yorum.fromJson(json.decode(response.body));
@@ -348,13 +329,11 @@ class ApiServisi {
   //  MAĞAZA (STORE)
   // ═══════════════════════════════════════════════════
 
-  /// Mağaza paketlerini listeler.
   Future<List<Paket>> paketleriGetir() async {
     final headers = await _authHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/store/packages'),
-      headers: headers,
-    ).timeout(_timeout);
+    final response = await http
+        .get(Uri.parse('$baseUrl/store/packages'), headers: headers)
+        .timeout(_timeout);
 
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
@@ -364,13 +343,11 @@ class ApiServisi {
     }
   }
 
-  /// Paket satın alır.
   Future<SatinAlmaSonuc> paketSatinAl(String packageId) async {
     final headers = await _authHeaders();
-    final response = await http.post(
-      Uri.parse('$baseUrl/store/purchase/$packageId'),
-      headers: headers,
-    ).timeout(_timeout);
+    final response = await http
+        .post(Uri.parse('$baseUrl/store/purchase/$packageId'), headers: headers)
+        .timeout(_timeout);
 
     if (response.statusCode == 200) {
       return SatinAlmaSonuc.fromJson(json.decode(response.body));
@@ -379,13 +356,11 @@ class ApiServisi {
     }
   }
 
-  /// Kullanıcının kredi ve abonelik bilgisini getirir.
   Future<KrediBilgisi> krediBilgisiGetir() async {
     final headers = await _authHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/store/my-credits'),
-      headers: headers,
-    ).timeout(_timeout);
+    final response = await http
+        .get(Uri.parse('$baseUrl/store/my-credits'), headers: headers)
+        .timeout(_timeout);
 
     if (response.statusCode == 200) {
       return KrediBilgisi.fromJson(json.decode(response.body));
@@ -398,7 +373,6 @@ class ApiServisi {
   //  MODİFİKASYON
   // ═══════════════════════════════════════════════════
 
-  /// Yeni modifikasyon kaydı oluşturur.
   Future<Map<String, dynamic>> modifikasyonOlustur({
     required int scanId,
     int? jantId,
@@ -409,11 +383,13 @@ class ApiServisi {
     if (jantId != null) body['jant_id'] = jantId;
     if (colorId != null) body['color_id'] = colorId;
 
-    final response = await http.post(
-      Uri.parse('$baseUrl/modifications'),
-      headers: headers,
-      body: json.encode(body),
-    ).timeout(_timeout);
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/modifications'),
+          headers: headers,
+          body: json.encode(body),
+        )
+        .timeout(_timeout);
 
     if (response.statusCode == 201) {
       return json.decode(response.body);
@@ -422,13 +398,11 @@ class ApiServisi {
     }
   }
 
-  /// Kullanıcının taslaklarını getirir.
   Future<List<Taslak>> taslaklariGetir() async {
     final headers = await _authHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/modifications/drafts'),
-      headers: headers,
-    ).timeout(_timeout);
+    final response = await http
+        .get(Uri.parse('$baseUrl/modifications/drafts'), headers: headers)
+        .timeout(_timeout);
 
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);

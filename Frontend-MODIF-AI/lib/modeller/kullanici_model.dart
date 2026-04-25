@@ -26,7 +26,8 @@ class Kullanici {
       name: json['name'] ?? '',
       surname: json['surname'] ?? '',
       email: json['email'] ?? '',
-      profilImageUrl: json['profil_image_url'] ?? json['profile_image_url'],
+      // Backend'de artık sadece 'profil_image_url' kullanıyoruz
+      profilImageUrl: json['profil_image_url'],
       userCredi: json['user_credi'] ?? 0,
       createImage: json['create_image'] ?? 0,
       renderImage: json['render_image'] ?? 0,
