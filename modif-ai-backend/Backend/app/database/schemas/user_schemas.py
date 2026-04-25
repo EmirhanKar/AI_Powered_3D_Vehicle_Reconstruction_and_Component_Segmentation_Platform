@@ -22,7 +22,7 @@ class UserToken(BaseModel):
     
 class UserResponse(UserBase):
     user_id: int
-    profile_image_url: Optional[str] = None
+    profil_image_url: Optional[str] = None
     user_credi: int = 0
     create_image: int = 0
     render_image: int = 0
