@@ -1,0 +1,293 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'sistem_ve_dil.dart';
+import 'ortak_widgetlar.dart';
+import 'sayfalar_ana.dart';
+import 'oyun_sayfasi.dart';
+import 'modeller/plugin_model.dart';
+import 'servisler/api_servisi.dart';
+
+// ── PROJE TİPİ SEÇİMİ ──
+class ProjeTipiSecimSayfasi extends StatelessWidget {
+  const ProjeTipiSecimSayfasi({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<String>(
+      valueListenable: appLanguage,
+      builder: (context, lang, child) {
+        final Color koyuArkaplan = const Color(0xFF0A1017);
+        return Scaffold(
+          backgroundColor: koyuArkaplan,
+          appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0, leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)), title: Text(t('select_project_type'), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)), centerTitle: true),
+          body: Column(children: [
+            Expanded(child: GestureDetector(
+              onTap: () { HapticFeedback.mediumImpact(); Navigator.push(context, MaterialPageRoute(builder: (c) => const FotografYuklemeSayfasi(method: '2d'))); },
+              child: Container(margin: const EdgeInsets.all(16), decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), image: const DecorationImage(image: NetworkImage('https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=1000'), fit: BoxFit.cover), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 10, spreadRadius: 2)]),
+                child: Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.8)])),
+                  child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [const Icon(Icons.image, color: Colors.white, size: 48), const SizedBox(height: 12), Text(t('2d_mod'), style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)), const SizedBox(height: 8), Text(t('2d_desc'), textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 14)), const SizedBox(height: 32)]))),
+              ),
+            )),
+            Expanded(child: GestureDetector(
+              onTap: () { HapticFeedback.mediumImpact(); Navigator.push(context, MaterialPageRoute(builder: (c) => const FotografYuklemeSayfasi(method: '3d'))); },
+              child: Container(margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16), decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), image: const DecorationImage(image: NetworkImage('https://images.unsplash.com/photo-1617788138017-80ad40651399?q=80&w=1000'), fit: BoxFit.cover), boxShadow: [BoxShadow(color: Colors.blueAccent.withOpacity(0.3), blurRadius: 10, spreadRadius: 2)]),
+                child: Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.blue.shade900.withOpacity(0.9)])),
+                  child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [const Icon(Icons.threed_rotation, color: Colors.white, size: 48), const SizedBox(height: 12), Text(t('3d_mod'), style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)), const SizedBox(height: 8), Text(t('3d_desc'), textAlign: TextAlign.center, style: const TextStyle(color: Colors.blueAccent, fontSize: 14)), const SizedBox(height: 32)]))),
+              ),
+            )),
+          ]),
+        );
+      },
+    );
+  }
+}
+
+// ── FOTOĞRAF YÜKLEME (Hem 2D hem 3D) ──
+class FotografYuklemeSayfasi extends StatefulWidget {
+  final String method;
+  const FotografYuklemeSayfasi({super.key, required this.method});
+  @override
+  State<FotografYuklemeSayfasi> createState() => _FotografYuklemeSayfasiState();
+}
+
+class _FotografYuklemeSayfasiState extends State<FotografYuklemeSayfasi> {
+  final ImagePicker _picker = ImagePicker();
+  final List<XFile> _seciliResimler = [];
+  final _carNameCtrl = TextEditingController();
+  final List<String> _acilar = ['Ön', 'Sağ Yan', 'Sol Yan', 'Arka', 'Ön Sağ', 'Ön Sol', 'Arka Sağ', 'Arka Sol'];
+
+  int get _gerekliSayi => 8; // Backend her zaman 8 istiyor
+
+  Future<void> _fotografSec(int index) async {
+    HapticFeedback.selectionClick();
+    final source = await showDialog<ImageSource>(context: context, builder: (ctx) => AlertDialog(
+      backgroundColor: const Color(0xFF182434),
+      title: Text(t('photo_source'), style: const TextStyle(color: Colors.white)),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        ListTile(leading: const Icon(Icons.camera_alt, color: Colors.white), title: Text(t('take_photo'), style: const TextStyle(color: Colors.white)), onTap: () => Navigator.pop(ctx, ImageSource.camera)),
+        const Divider(color: Colors.white10),
+        ListTile(leading: const Icon(Icons.photo_library, color: Colors.white), title: Text(t('choose_gallery'), style: const TextStyle(color: Colors.white)), onTap: () => Navigator.pop(ctx, ImageSource.gallery)),
+      ]),
+    ));
+    if (source == null) return;
+    final photo = await _picker.pickImage(source: source, maxWidth: 1920, maxHeight: 1920, imageQuality: 85);
+    if (photo == null) return;
+    setState(() {
+      if (index < _seciliResimler.length) { _seciliResimler[index] = photo; }
+      else { _seciliResimler.add(photo); }
+    });
+  }
+
+  Future<void> _devamEt() async {
+    if (_seciliResimler.length < _gerekliSayi) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lütfen $_gerekliSayi fotoğraf yükleyin! (${_seciliResimler.length}/$_gerekliSayi)'), backgroundColor: Colors.orange, behavior: SnackBarBehavior.floating));
+      return;
+    }
+    if (_carNameCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Araç adını girin!'), backgroundColor: Colors.orange, behavior: SnackBarBehavior.floating));
+      return;
+    }
+    Navigator.push(context, MaterialPageRoute(builder: (c) => ModifiyeSecimSayfasi(photos: _seciliResimler, carName: _carNameCtrl.text.trim(), method: widget.method)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color anaRenk = const Color(0xFF257bf4);
+    final Color koyuArkaplan = const Color(0xFF0A1017);
+    final Color koyuYuzey = const Color(0xFF182434);
+    final bool is3d = widget.method == '3d';
+
+    return Scaffold(
+      backgroundColor: koyuArkaplan,
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0, leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)), title: Text(t('upload_photo'), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)), centerTitle: true),
+      body: SafeArea(child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          const SizedBox(height: 10),
+          Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: koyuYuzey, shape: BoxShape.circle), child: Icon(is3d ? Icons.threed_rotation : Icons.image, color: anaRenk, size: 32)),
+          const SizedBox(height: 16),
+          Text(is3d ? t('turn_3d') : t('turn_2d'), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, height: 1.2)),
+          const SizedBox(height: 12),
+          TextField(controller: _carNameCtrl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(filled: true, fillColor: koyuYuzey, hintText: 'Araç Adı (ör: BMW M3 2024)', hintStyle: const TextStyle(color: Colors.grey, fontSize: 14), prefixIcon: const Icon(Icons.directions_car, color: Colors.grey), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+          const SizedBox(height: 16),
+          Text('${_seciliResimler.length}/$_gerekliSayi fotoğraf seçildi', style: TextStyle(color: _seciliResimler.length == _gerekliSayi ? Colors.greenAccent : Colors.grey, fontSize: 12)),
+          const SizedBox(height: 8),
+          Expanded(child: GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 0.9),
+            itemCount: _gerekliSayi,
+            itemBuilder: (context, index) {
+              final yuklendiMi = index < _seciliResimler.length;
+              return InkWell(
+                onTap: () => _fotografSec(index),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  decoration: BoxDecoration(color: koyuYuzey, borderRadius: BorderRadius.circular(16), border: Border.all(color: yuklendiMi ? anaRenk : Colors.white.withOpacity(0.05), width: 1.5)),
+                  child: Stack(children: [
+                    if (yuklendiMi) ClipRRect(borderRadius: BorderRadius.circular(14), child: Image.asset(_seciliResimler[index].path, width: double.infinity, height: double.infinity, fit: BoxFit.cover, errorBuilder: (c, e, s) => Container(color: Colors.green.withOpacity(0.1), child: const Center(child: Icon(Icons.check, color: Colors.greenAccent, size: 48))))),
+                    Positioned(top: 12, right: 12, child: Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: yuklendiMi ? anaRenk : Colors.white.withOpacity(0.05), shape: BoxShape.circle), child: Icon(yuklendiMi ? Icons.check : Icons.add, color: yuklendiMi ? Colors.white : Colors.grey, size: 16))),
+                    if (!yuklendiMi) Center(child: Icon(Icons.add_a_photo, color: Colors.grey.withOpacity(0.3), size: 48)),
+                    Positioned(bottom: 12, left: 0, right: 0, child: Text(index < _acilar.length ? _acilar[index] : 'Açı ${index + 1}', textAlign: TextAlign.center, style: TextStyle(color: yuklendiMi ? Colors.white : Colors.grey, fontWeight: FontWeight.bold, fontSize: 12))),
+                  ]),
+                ),
+              );
+            },
+          )),
+          Container(padding: const EdgeInsets.symmetric(vertical: 20), child: ElevatedButton.icon(
+            onPressed: _devamEt,
+            icon: const Icon(Icons.arrow_forward, color: Colors.white),
+            label: Text(t('continue_btn'), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(backgroundColor: anaRenk, minimumSize: const Size(double.infinity, 56), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+          )),
+        ]),
+      )),
+    );
+  }
+}
+
+// ── MODİFİYE SEÇİM SAYFASI ──
+class ModifiyeSecimSayfasi extends StatefulWidget {
+  final List<XFile>? photos;
+  final String? carName;
+  final String? method;
+  const ModifiyeSecimSayfasi({super.key, this.photos, this.carName, this.method});
+  @override
+  State<ModifiyeSecimSayfasi> createState() => _ModifiyeSecimSayfasiState();
+}
+
+class _ModifiyeSecimSayfasiState extends State<ModifiyeSecimSayfasi> {
+  int _seciliRenkIndex = -1;
+  int _seciliJantIndex = -1;
+  bool _isYukleniyor = false;
+  List<JantModel> _jantlar = [];
+  List<RenkModel> _renkler = [];
+  bool _pluginsYukleniyor = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _pluginlariYukle();
+  }
+
+  Future<void> _pluginlariYukle() async {
+    try {
+      final jantlar = await ApiServisi().jantlariGetir();
+      final renkler = await ApiServisi().renkleriGetir();
+      if (mounted) setState(() { _jantlar = jantlar; _renkler = renkler; _pluginsYukleniyor = false; });
+    } catch (e) {
+      if (mounted) setState(() => _pluginsYukleniyor = false);
+    }
+  }
+
+  void _uretimiBaslat(BuildContext context) async {
+    HapticFeedback.mediumImpact();
+    setState(() => _isYukleniyor = true);
+    try {
+      // 1. Fotoğrafları yükle ve scan oluştur
+      if (widget.photos != null && widget.carName != null && widget.method != null) {
+        final scan = await ApiServisi().fotografYukle(files: widget.photos!, carName: widget.carName!, method: widget.method!);
+        // 2. Modifikasyon kaydı oluştur
+        int? jantId = _seciliJantIndex >= 0 && _seciliJantIndex < _jantlar.length ? _jantlar[_seciliJantIndex].jantId : null;
+        int? colorId = _seciliRenkIndex >= 0 && _seciliRenkIndex < _renkler.length ? _renkler[_seciliRenkIndex].colorId : null;
+        await ApiServisi().modifikasyonOlustur(scanId: scan.scanId, jantId: jantId, colorId: colorId);
+      }
+      if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (c) => const RenderSayfasi()));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll("Exception: ", "")), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
+        setState(() => _isYukleniyor = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color anaRenk = const Color(0xFF257bf4);
+    final Color koyuArkaplan = const Color(0xFF0A1017);
+    final Color koyuYuzey = const Color(0xFF182434);
+
+    return Scaffold(
+      backgroundColor: koyuArkaplan,
+      extendBodyBehindAppBar: true,
+      appBar: PreferredSize(preferredSize: const Size.fromHeight(70), child: GlassHeader(child: SafeArea(bottom: false, child: Row(children: [IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)), Expanded(child: Text(t('mod_selection'), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold), textAlign: TextAlign.center)), const SizedBox(width: 48)])))),
+      body: SafeArea(child: Column(children: [
+        Expanded(child: _pluginsYukleniyor
+          ? Center(child: CircularProgressIndicator(color: anaRenk))
+          : SingleChildScrollView(padding: const EdgeInsets.only(left: 24, right: 24, top: 10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // Önizleme
+              Container(height: 220, width: double.infinity, decoration: BoxDecoration(color: koyuYuzey, borderRadius: BorderRadius.circular(24), border: Border.all(color: Colors.white.withOpacity(0.08))),
+                child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.directions_car, size: 80, color: Colors.grey), const SizedBox(height: 10), Text(t('preview_area'), style: const TextStyle(color: Colors.grey, fontSize: 12))]))),
+              const SizedBox(height: 32),
+              // Renk Paleti
+              Text(t('color_palette'), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              _renkler.isEmpty
+                ? const Text('Henüz renk eklenmemiş', style: TextStyle(color: Colors.grey))
+                : GridView.builder(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: _renkler.length, gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 7, crossAxisSpacing: 10, mainAxisSpacing: 10),
+                    itemBuilder: (context, index) {
+                      final renk = Color(_renkler[index].colorValue);
+                      return GestureDetector(
+                        onTap: () { HapticFeedback.selectionClick(); setState(() => _seciliRenkIndex = index); },
+                        child: AnimatedContainer(duration: const Duration(milliseconds: 200), decoration: BoxDecoration(color: renk, shape: BoxShape.circle, border: Border.all(color: _seciliRenkIndex == index ? Colors.white : Colors.transparent, width: 3), boxShadow: _seciliRenkIndex == index ? [BoxShadow(color: renk.withOpacity(0.6), blurRadius: 12, spreadRadius: 2)] : [])),
+                      );
+                    }),
+              const SizedBox(height: 32),
+              // Jant Seçenekleri
+              Text(t('wheel_options'), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              _jantlar.isEmpty
+                ? const Text('Henüz jant eklenmemiş', style: TextStyle(color: Colors.grey))
+                : SizedBox(height: 100, child: ListView.builder(scrollDirection: Axis.horizontal, itemCount: _jantlar.length, itemBuilder: (context, index) {
+                    final jant = _jantlar[index];
+                    final jantImgUrl = ApiServisi.buildImageUrl(jant.imageUrl);
+                    return GestureDetector(
+                      onTap: () { HapticFeedback.selectionClick(); setState(() => _seciliJantIndex = index); },
+                      child: AnimatedContainer(duration: const Duration(milliseconds: 200), margin: const EdgeInsets.only(right: 12), width: 100,
+                        decoration: BoxDecoration(color: koyuYuzey, borderRadius: BorderRadius.circular(16), border: Border.all(color: _seciliJantIndex == index ? anaRenk : Colors.white.withOpacity(0.05), width: 2.5), boxShadow: _seciliJantIndex == index ? [BoxShadow(color: anaRenk.withOpacity(0.3), blurRadius: 15, spreadRadius: 1)] : []),
+                        child: ClipRRect(borderRadius: BorderRadius.circular(14), child: Stack(children: [
+                          if (jantImgUrl != null) Image.network(jantImgUrl, fit: BoxFit.cover, width: double.infinity, height: double.infinity, errorBuilder: (c, e, s) => Container(color: Colors.black26, child: const Icon(Icons.tire_repair, color: Colors.grey)))
+                          else Container(color: Colors.black26, child: Center(child: Icon(Icons.tire_repair, color: Colors.grey.withOpacity(0.5)))),
+                          Positioned(bottom: 4, left: 4, right: 4, child: Container(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2), decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(6)), child: Text(jant.modelName, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center))),
+                        ])),
+                      ),
+                    );
+                  })),
+              const SizedBox(height: 30),
+            ]))),
+        // Alt buton
+        Container(
+          padding: const EdgeInsets.all(24.0),
+          decoration: BoxDecoration(color: koyuYuzey, borderRadius: const BorderRadius.vertical(top: Radius.circular(28)), border: const Border(top: BorderSide(color: Colors.white10, width: 0.5))),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            InkWell(
+              onTap: _isYukleniyor ? null : () => _uretimiBaslat(context),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
+                decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF257bf4), Color(0xFF8A2387)]), borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: const Color(0xFF257bf4).withOpacity(0.5), blurRadius: 15, spreadRadius: 2)]),
+                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: _isYukleniyor
+                  ? [const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))]
+                  : [const Icon(Icons.auto_fix_high, color: Colors.white, size: 24), const SizedBox(width: 12), Text(t('start_prod'), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))]),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(onPressed: () { HapticFeedback.lightImpact(); Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (c) => const AnaSayfa(initialIndex: 2)), (r) => false); },
+              child: Text(t('not_enough_credit'), style: const TextStyle(color: Colors.grey, fontSize: 12, decoration: TextDecoration.underline))),
+          ]),
+        ),
+      ])),
+    );
+  }
+}
+
+// Izgara çizicisi
+class GridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    var paint = Paint()..color = Colors.white..strokeWidth = 0.5;
+    double step = 20.0;
+    for (double i = 0; i < size.width; i += step) canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
+    for (double i = 0; i < size.height; i += step) canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
+  }
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
