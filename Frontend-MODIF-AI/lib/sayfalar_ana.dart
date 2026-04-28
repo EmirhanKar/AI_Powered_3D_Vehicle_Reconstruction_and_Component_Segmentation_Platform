@@ -7,6 +7,7 @@ import 'sekme_anasayfa.dart';
 import 'sekme_kesfet.dart';
 import 'sekme_magaza.dart';
 import 'sekme_profil.dart';
+import 'sekme_bildirim.dart';
 import 'servisler/api_servisi.dart';
 import 'servisler/auth_servisi.dart';
 import 'modeller/kullanici_model.dart';
@@ -39,14 +40,14 @@ class _AcilisSayfasiState extends State<AcilisSayfasi> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A1017),
+      backgroundColor: arkaplanRengi(),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(width: 200, height: 200, decoration: const BoxDecoration(image: DecorationImage(image: AssetImage('assets/LOGO101.png'), fit: BoxFit.contain))),
             const SizedBox(height: 24),
-            const Text('Modif AI', style: TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold, letterSpacing: 3.0)),
+            Text('Modif AI', style: TextStyle(color: yaziRengi(), fontSize: 40, fontWeight: FontWeight.bold, letterSpacing: 3.0)),
             const SizedBox(height: 8),
             const Text('AI CAR TUNING STUDIO', style: TextStyle(color: Colors.blueAccent, fontSize: 12, letterSpacing: 2.0)),
             const SizedBox(height: 60),
@@ -99,7 +100,7 @@ class _GirisSayfasiState extends State<GirisSayfasi> {
         final Color koyuYuzey = const Color(0xFF182434);
         return Scaffold(
           backgroundColor: koyuArkaplan,
-          resizeToAvoidBottomInset: false,
+          resizeToAvoidBottomInset: true,
           body: Stack(
             children: [
               Positioned.fill(child: Image.network('https://images.unsplash.com/photo-1542282088-fe8426682b8f?q=80&w=1000&auto=format&fit=crop', fit: BoxFit.cover)),
@@ -185,28 +186,28 @@ class _KayitSayfasiState extends State<KayitSayfasi> {
   @override
   Widget build(BuildContext context) {
     final Color anaRenk = const Color(0xFF257bf4);
-    final Color koyuArkaplan = const Color(0xFF0A1017);
-    final Color koyuYuzey = const Color(0xFF182434);
+    final Color koyuArkaplan = arkaplanRengi();
+    final Color koyuYuzey = yuzeyRengi();
     InputDecoration _dec(String hint, IconData icon) => InputDecoration(filled: true, fillColor: koyuYuzey.withOpacity(0.8), hintText: hint, hintStyle: const TextStyle(color: Colors.grey), prefixIcon: Icon(icon, color: Colors.grey), border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: anaRenk, width: 2)));
 
     return Scaffold(
       backgroundColor: koyuArkaplan,
-      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0, leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)), title: Text(t('signup'), style: const TextStyle(color: Colors.white)), centerTitle: true),
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0, leading: IconButton(icon: Icon(Icons.arrow_back, color: yaziRengi()), onPressed: () => Navigator.pop(context)), title: Text(t('signup'), style: TextStyle(color: yaziRengi())), centerTitle: true),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.person_add, size: 64, color: Colors.white),
+              Icon(Icons.person_add, size: 64, color: yaziRengi()),
               const SizedBox(height: 32),
-              TextField(controller: _adCtrl, style: const TextStyle(color: Colors.white), decoration: _dec('Ad', Icons.person)),
+              TextField(controller: _adCtrl, style: TextStyle(color: yaziRengi()), decoration: _dec('Ad', Icons.person)),
               const SizedBox(height: 16),
-              TextField(controller: _soyadCtrl, style: const TextStyle(color: Colors.white), decoration: _dec('Soyad', Icons.person_outline)),
+              TextField(controller: _soyadCtrl, style: TextStyle(color: yaziRengi()), decoration: _dec('Soyad', Icons.person_outline)),
               const SizedBox(height: 16),
-              TextField(controller: _emailCtrl, style: const TextStyle(color: Colors.white), keyboardType: TextInputType.emailAddress, decoration: _dec('E-posta', Icons.email)),
+              TextField(controller: _emailCtrl, style: TextStyle(color: yaziRengi()), keyboardType: TextInputType.emailAddress, decoration: _dec('E-posta', Icons.email)),
               const SizedBox(height: 16),
-              TextField(controller: _sifreCtrl, obscureText: true, style: const TextStyle(color: Colors.white), decoration: _dec('Şifre (min 8 karakter)', Icons.lock)),
+              TextField(controller: _sifreCtrl, obscureText: true, style: TextStyle(color: yaziRengi()), decoration: _dec('Şifre (min 8 karakter)', Icons.lock)),
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: _isYukleniyor ? null : _kayitOl,
@@ -232,8 +233,6 @@ class AnaSayfa extends StatefulWidget {
 class _AnaSayfaState extends State<AnaSayfa> {
   late int _seciliSayfaIndex;
   final Color anaRenk = const Color(0xFF257bf4);
-  final Color koyuYuzey = const Color(0xFF182434);
-  final Color koyuArkaplan = const Color(0xFF0A1017);
 
   bool _yukleniyor = true;
   
@@ -245,6 +244,8 @@ class _AnaSayfaState extends State<AnaSayfa> {
     super.initState();
     _seciliSayfaIndex = widget.initialIndex;
     _kullaniciBilgileriniYukle();
+    // Bildirim badge'ini yükle
+    BildirimServisi.okunmamisSayisiniGuncelle();
   }
 
   Future<void> _kullaniciBilgileriniYukle() async {
@@ -257,20 +258,12 @@ class _AnaSayfaState extends State<AnaSayfa> {
     }
   }
 
-  Map<String, dynamic> _getRankDetails(int renders) {
-    if (renders >= 50) return {'level': 5, 'name': t('grandmaster'), 'icon': '👑', 'color': const Color(0xFFFFD700), 'progress': 1.0, 'next': 50, 'min': 50};
-    if (renders >= 30) return {'level': 4, 'name': t('senior'), 'icon': '🏅', 'color': Colors.orangeAccent, 'progress': (renders - 30) / 20.0, 'next': 50, 'min': 30};
-    if (renders >= 20) return {'level': 3, 'name': t('master'), 'icon': '⚙️', 'color': Colors.blueGrey.shade300, 'progress': (renders - 20) / 10.0, 'next': 30, 'min': 20};
-    if (renders >= 10) return {'level': 2, 'name': t('journeyman'), 'icon': '🛠️', 'color': Colors.green.shade400, 'progress': (renders - 10) / 10.0, 'next': 20, 'min': 10};
-    return {'level': 1, 'name': t('apprentice'), 'icon': '🔧', 'color': Colors.brown.shade300, 'progress': renders / 10.0, 'next': 10, 'min': 0};
-  }
-
   void _diliSec() {
-    showModalBottomSheet(context: context, backgroundColor: koyuYuzey, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))), builder: (context) {
+    showModalBottomSheet(context: context, backgroundColor: yuzeyRengi(), shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))), builder: (context) {
       return SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Padding(padding: const EdgeInsets.all(16.0), child: Text(t('select_lang_title'), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
-        ListTile(leading: const Text('🇹🇷', style: TextStyle(fontSize: 24)), title: const Text('Türkçe', style: TextStyle(color: Colors.white)), onTap: () { appLanguage.value = 'tr'; Navigator.pop(context); }),
-        ListTile(leading: const Text('🇬🇧', style: TextStyle(fontSize: 24)), title: const Text('English', style: TextStyle(color: Colors.white)), onTap: () { appLanguage.value = 'en'; Navigator.pop(context); }),
+        Padding(padding: const EdgeInsets.all(16.0), child: Text(t('select_lang_title'), style: TextStyle(color: yaziRengi(), fontSize: 18, fontWeight: FontWeight.bold))),
+        ListTile(leading: const Text('🇹🇷', style: TextStyle(fontSize: 24)), title: Text('Türkçe', style: TextStyle(color: yaziRengi())), onTap: () { appLanguage.value = 'tr'; Navigator.pop(context); }),
+        ListTile(leading: const Text('🇬🇧', style: TextStyle(fontSize: 24)), title: Text('English', style: TextStyle(color: yaziRengi())), onTap: () { appLanguage.value = 'en'; Navigator.pop(context); }),
         const SizedBox(height: 20),
       ]));
     });
@@ -280,13 +273,11 @@ class _AnaSayfaState extends State<AnaSayfa> {
     switch (_seciliSayfaIndex) {
       case 0: return SekmeAnaSayfa(kullanici: _kullanici, kredi: _kredi);
       case 1: return const SekmeKesfet();
-      case 2: return const SekmeMagaza();
+      case 2: return SekmeMagaza(onCreditsChanged: _kullaniciBilgileriniYukle);
       case 3:
         return SekmeProfil(
           kullanici: _kullanici,
           kredi: _kredi,
-          rankDetails: _getRankDetails(_kullanici?.renderImage ?? 0),
-          onRanksTap: () {},
           onTopUpTap: () { setState(() { _seciliSayfaIndex = 2; }); },
           onLangTap: _diliSec,
           onProfileUpdated: _kullaniciBilgileriniYukle,
@@ -295,9 +286,42 @@ class _AnaSayfaState extends State<AnaSayfa> {
     }
   }
 
+  // Madde 10: Bildirim badge ile çan ikonu
+  Widget _bildirimButonuOlustur() {
+    return ValueListenableBuilder<int>(
+      valueListenable: okunmamisBildirimSayisi,
+      builder: (context, sayi, child) {
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              decoration: BoxDecoration(color: yaziRengi().withOpacity(0.05), shape: BoxShape.circle),
+              child: IconButton(
+                icon: Icon(Icons.notifications_none, color: yaziRengi()),
+                onPressed: () async {
+                  await Navigator.push(context, MaterialPageRoute(builder: (c) => const BildirimSayfasi()));
+                  // Geri dönünce badge güncelle
+                  BildirimServisi.okunmamisSayisiniGuncelle();
+                },
+              ),
+            ),
+            if (sayi > 0)
+              Positioned(
+                right: 2, top: 2,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle, border: Border.all(color: arkaplanRengi(), width: 2)),
+                  constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                  child: Text('$sayi', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _ustBilgiOlustur() {
-    final renderCount = _kullanici?.renderImage ?? 0;
-    var rankDetails = _getRankDetails(renderCount);
     final profilUrl = ApiServisi.buildImageUrl(_kullanici?.profilImageUrl);
     return GlassHeader(
       child: SafeArea(
@@ -306,18 +330,16 @@ class _AnaSayfaState extends State<AnaSayfa> {
           children: [
             Row(children: [
               Stack(children: [
-                Container(width: 48, height: 48, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: anaRenk.withOpacity(0.3), width: 2), image: profilUrl != null ? DecorationImage(image: NetworkImage(profilUrl), fit: BoxFit.cover) : null, color: profilUrl == null ? koyuYuzey : null), child: profilUrl == null ? const Icon(Icons.person, color: Colors.grey) : null),
-                Positioned(bottom: 0, right: 0, child: Container(width: 12, height: 12, decoration: BoxDecoration(color: Colors.green, shape: BoxShape.circle, border: Border.all(color: koyuArkaplan, width: 2)))),
+                Container(width: 48, height: 48, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: anaRenk.withOpacity(0.3), width: 2), image: profilUrl != null ? DecorationImage(image: NetworkImage(profilUrl), fit: BoxFit.cover) : null, color: profilUrl == null ? yuzeyRengi() : null), child: profilUrl == null ? const Icon(Icons.person, color: Colors.grey) : null),
+                Positioned(bottom: 0, right: 0, child: Container(width: 12, height: 12, decoration: BoxDecoration(color: Colors.green, shape: BoxShape.circle, border: Border.all(color: arkaplanRengi(), width: 2)))),
               ]),
               const SizedBox(width: 16),
+              // Madde 5: AI Auto Studio kaldırıldı
               Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                Text(t('welcome_user'), style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
-                Text(_kullanici?.name ?? '...', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                const SizedBox(height: 4),
-                Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: (rankDetails['color'] as Color).withOpacity(0.1), border: Border.all(color: rankDetails['color']), borderRadius: BorderRadius.circular(12)), child: Row(mainAxisSize: MainAxisSize.min, children: [Text(rankDetails['icon'], style: const TextStyle(fontSize: 10)), const SizedBox(width: 4), Text('${rankDetails['level']}. ${t('level')} ${rankDetails['name']}', style: TextStyle(color: rankDetails['color'], fontWeight: FontWeight.bold, fontSize: 10))])),
+                Text('${t('welcome_greeting')}, ${_kullanici?.name ?? '...'}! 👋', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: yaziRengi())),
               ]),
             ]),
-            Container(decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle), child: IconButton(icon: const Icon(Icons.notifications_none, color: Colors.white), onPressed: () {})),
+            _bildirimButonuOlustur(),
           ],
         ),
       ),
@@ -326,7 +348,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
 
   Widget _floatingAppBarOlustur() {
     if (_seciliSayfaIndex == 0) return Positioned(top: 0, left: 0, right: 0, child: _ustBilgiOlustur());
-    if (_seciliSayfaIndex == 3) return Positioned(top: 0, left: 0, right: 0, child: GlassHeader(child: SafeArea(child: Text(_kullanici?.fullName ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)))));
+    if (_seciliSayfaIndex == 3) return Positioned(top: 0, left: 0, right: 0, child: GlassHeader(child: SafeArea(child: Text(_kullanici?.fullName ?? '', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: yaziRengi())))));
     return const SizedBox.shrink();
   }
 
@@ -340,21 +362,26 @@ class _AnaSayfaState extends State<AnaSayfa> {
     return ValueListenableBuilder<String>(
       valueListenable: appLanguage,
       builder: (context, lang, child) {
-        return PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (didPop, result) async {
-            if (didPop) return;
-            HapticFeedback.lightImpact();
-            await showDialog(context: context, builder: (context) => AlertDialog(backgroundColor: koyuYuzey, title: Text(t('exit_app'), style: const TextStyle(color: Colors.white)), content: Text(t('exit_sure'), style: const TextStyle(color: Colors.grey)), actions: [TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(t('no'), style: const TextStyle(color: Colors.grey))), ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: anaRenk), onPressed: () { SystemNavigator.pop(); }, child: Text(t('yes'), style: const TextStyle(color: Colors.white)))]));
+        return ValueListenableBuilder<bool>(
+          valueListenable: isDarkMode,
+          builder: (context, dark, child) {
+            return PopScope(
+              canPop: false,
+              onPopInvokedWithResult: (didPop, result) async {
+                if (didPop) return;
+                HapticFeedback.lightImpact();
+                await showDialog(context: context, builder: (context) => AlertDialog(backgroundColor: yuzeyRengi(), title: Text(t('exit_app'), style: TextStyle(color: yaziRengi())), content: Text(t('exit_sure'), style: TextStyle(color: ikinciYaziRengi())), actions: [TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(t('no'), style: const TextStyle(color: Colors.grey))), ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: anaRenk), onPressed: () { SystemNavigator.pop(); }, child: Text(t('yes'), style: const TextStyle(color: Colors.white)))]));
+              },
+              child: Scaffold(
+                backgroundColor: arkaplanRengi(),
+                extendBodyBehindAppBar: true,
+                body: Stack(children: [_sayfaIceriginiGetir(), _floatingAppBarOlustur()]),
+                floatingActionButton: FloatingActionButton(onPressed: () { HapticFeedback.lightImpact(); yumusakGecisYap(context, const ProjeTipiSecimSayfasi()); }, backgroundColor: anaRenk, shape: const CircleBorder(), elevation: 8, child: const Icon(Icons.auto_fix_high, color: Colors.white, size: 28)),
+                floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+                bottomNavigationBar: BottomAppBar(color: yuzeyRengi(), shape: const CircularNotchedRectangle(), notchMargin: 8.0, child: SizedBox(height: 60, child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: <Widget>[_altMenusuButonuOlustur(Icons.home, t('home_tab'), 0), _altMenusuButonuOlustur(Icons.photo_library_outlined, t('discover_tab'), 1), const SizedBox(width: 40), _altMenusuButonuOlustur(Icons.diamond_outlined, t('store_tab'), 2), _altMenusuButonuOlustur(Icons.person_outline, t('profile_tab'), 3)]))),
+              ),
+            );
           },
-          child: Scaffold(
-            backgroundColor: koyuArkaplan,
-            extendBodyBehindAppBar: true,
-            body: Stack(children: [_sayfaIceriginiGetir(), _floatingAppBarOlustur()]),
-            floatingActionButton: FloatingActionButton(onPressed: () { HapticFeedback.lightImpact(); yumusakGecisYap(context, const ProjeTipiSecimSayfasi()); }, backgroundColor: anaRenk, shape: const CircleBorder(), elevation: 8, child: const Icon(Icons.auto_fix_high, color: Colors.white, size: 28)),
-            floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-            bottomNavigationBar: BottomAppBar(color: koyuYuzey, shape: const CircularNotchedRectangle(), notchMargin: 8.0, child: SizedBox(height: 60, child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: <Widget>[_altMenusuButonuOlustur(Icons.home, t('home_tab'), 0), _altMenusuButonuOlustur(Icons.photo_library_outlined, t('discover_tab'), 1), const SizedBox(width: 40), _altMenusuButonuOlustur(Icons.diamond_outlined, t('store_tab'), 2), _altMenusuButonuOlustur(Icons.person_outline, t('profile_tab'), 3)]))),
-          ),
         );
       },
     );

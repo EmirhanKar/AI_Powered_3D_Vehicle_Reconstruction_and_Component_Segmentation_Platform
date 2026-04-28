@@ -18,14 +18,17 @@ class SekmeAnaSayfa extends StatefulWidget {
 
 class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
   final Color anaRenk = const Color(0xFF257bf4);
-  final Color koyuYuzey = const Color(0xFF182434);
   late Future<List<Scan>> _garajFuture;
   late Future<List<Taslak>> _taslakFuture;
+  int _garajSayisi = 0;
 
   @override
   void initState() {
     super.initState();
-    _garajFuture = ApiServisi().garajiGetir();
+    _garajFuture = ApiServisi().garajiGetir().then((list) {
+      if (mounted) setState(() => _garajSayisi = list.length);
+      return list;
+    });
     _taslakFuture = ApiServisi().taslaklariGetir();
   }
 
@@ -79,7 +82,7 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 24.0),
         child: Row(children: [
-          _istatistikKartiOlustur(Icons.garage, t('total'), '${u?.createImage ?? 0}', t('cars_in_garage'), anaRenk),
+          _istatistikKartiOlustur(Icons.garage, t('total'), '$_garajSayisi', t('cars_in_garage'), anaRenk),
           const SizedBox(width: 12),
           _istatistikKartiOlustur(Icons.view_in_ar, 'Render', '${u?.renderImage ?? 0}', t('created'), Colors.purpleAccent),
           const SizedBox(width: 12),
@@ -90,15 +93,16 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
   }
 
   Widget _istatistikKartiOlustur(IconData ikon, String baslik, String deger, String altBaslik, Color renk) {
-    return Container(width: 130, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: koyuYuzey, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withOpacity(0.05))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [Icon(ikon, color: renk, size: 18), const SizedBox(width: 4), Text(baslik, style: TextStyle(color: renk, fontSize: 12, fontWeight: FontWeight.bold))]), const SizedBox(height: 8), Text(deger, style: premiumNumberStyle.copyWith(color: Colors.white, fontSize: 24)), Text(altBaslik, style: const TextStyle(color: Colors.grey, fontSize: 10))]));
+    return Container(width: 130, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(16), border: Border.all(color: kartBorderRengi())), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [Icon(ikon, color: renk, size: 18), const SizedBox(width: 4), Text(baslik, style: TextStyle(color: renk, fontSize: 12, fontWeight: FontWeight.bold))]), const SizedBox(height: 8), Text(deger, style: premiumNumberStyle.copyWith(color: yaziRengi(), fontSize: 24)), Text(altBaslik, style: TextStyle(color: ikinciYaziRengi(), fontSize: 10))]));
   }
 
+  // Madde 7: Garaj kartlarına işlevsel butonlar
   Widget _garajKismiOlustur(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Column(children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Row(children: [Container(width: 4, height: 20, color: anaRenk), const SizedBox(width: 8), Text(t('my_garage'), style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold))]),
+          Row(children: [Container(width: 4, height: 20, color: anaRenk), const SizedBox(width: 8), Text(t('my_garage'), style: TextStyle(color: yaziRengi(), fontSize: 20, fontWeight: FontWeight.bold))]),
           TextButton(onPressed: () { HapticFeedback.lightImpact(); Navigator.push(context, MaterialPageRoute(builder: (context) => const TumGarajSayfasi())); }, child: Row(children: [Text(t('see_all'), style: TextStyle(color: anaRenk, fontSize: 12)), Icon(Icons.arrow_forward_ios, color: anaRenk, size: 12)])),
         ]),
         const SizedBox(height: 8),
@@ -106,12 +110,81 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
           future: _garajFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
-            if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) return Container(width: double.infinity, padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: koyuYuzey, borderRadius: BorderRadius.circular(16)), child: Text(snapshot.hasError ? "Bağlantı hatası" : "Garajın şu an boş.", style: const TextStyle(color: Colors.grey), textAlign: TextAlign.center));
+            if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) return Container(width: double.infinity, padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(16)), child: Text(snapshot.hasError ? "Bağlantı hatası" : "Garajın şu an boş.", style: const TextStyle(color: Colors.grey), textAlign: TextAlign.center));
             final scan = snapshot.data!.first;
             final thumbUrl = ApiServisi.buildImageUrl(scan.thumbnailUrl) ?? 'https://images.unsplash.com/photo-1603386329225-868f9b1ee6c9?q=80&w=1000';
-            return ArabaKartiOlusturucu.olustur(scan.carName, scan.method == '3d' ? '3D Model' : '2D Modifiye', thumbUrl, _zamanHesapla(scan.createdAt), anaRenk, koyuYuzey);
+            return ArabaKartiOlusturucu.olustur(
+              scan.carName,
+              scan.method == '3d' ? '3D Model' : '2D Modifiye',
+              thumbUrl,
+              _zamanHesapla(scan.createdAt),
+              anaRenk,
+              yuzeyRengi(),
+              scanId: scan.scanId,
+              onDuzenle: () {
+                HapticFeedback.lightImpact();
+                Navigator.push(context, MaterialPageRoute(builder: (c) => ModifiyeSecimSayfasi(scanId: scan.scanId, carName: scan.carName, method: scan.method)));
+              },
+              onPaylas: () async {
+                HapticFeedback.mediumImpact();
+                try {
+                  await ApiServisi().toplulugaPaylas(scan.scanId);
+                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('car_shared')), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+                } catch (e) {
+                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
+                }
+              },
+              onSil: () async {
+                final onay = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+                  backgroundColor: yuzeyRengi(),
+                  title: Text(t('delete_btn'), style: TextStyle(color: yaziRengi())),
+                  content: Text(t('delete_car_confirm'), style: TextStyle(color: ikinciYaziRengi())),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t('cancel'), style: const TextStyle(color: Colors.grey))),
+                    ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent), child: Text(t('delete_btn'), style: const TextStyle(color: Colors.white))),
+                  ],
+                ));
+                if (onay == true) {
+                  try {
+                    await ApiServisi().scanSil(scan.scanId);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('car_deleted')), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+                      setState(() { _garajFuture = ApiServisi().garajiGetir(); });
+                    }
+                  } catch (_) {}
+                }
+              },
+              onDetay: () {
+                HapticFeedback.lightImpact();
+                // Detay sayfası — scan bilgileri gösterilir
+                showModalBottomSheet(context: context, backgroundColor: yuzeyRengi(), shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))), builder: (ctx) {
+                  return SafeArea(child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(scan.carName, style: TextStyle(color: yaziRengi(), fontSize: 22, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
+                      _detaySatiri('Metod', scan.method == '3d' ? '3D Model' : '2D Modifiye'),
+                      _detaySatiri('Durum', scan.status == 'completed' ? 'Tamamlandı ✅' : scan.status),
+                      _detaySatiri('Oluşturulma', _zamanHesapla(scan.createdAt)),
+                      _detaySatiri('Scan ID', '#${scan.scanId}'),
+                      const SizedBox(height: 16),
+                    ]),
+                  ));
+                });
+              },
+            );
           },
         ),
+      ]),
+    );
+  }
+
+  Widget _detaySatiri(String etiket, String deger) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(etiket, style: TextStyle(color: ikinciYaziRengi(), fontSize: 14)),
+        Text(deger, style: TextStyle(color: yaziRengi(), fontSize: 14, fontWeight: FontWeight.w600)),
       ]),
     );
   }
@@ -132,7 +205,7 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Column(children: [
-            Row(children: [Container(width: 4, height: 20, color: Colors.orange), const SizedBox(width: 8), Text(t('drafts'), style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold))]),
+            Row(children: [Container(width: 4, height: 20, color: Colors.orange), const SizedBox(width: 8), Text(t('drafts'), style: TextStyle(color: yaziRengi(), fontSize: 20, fontWeight: FontWeight.bold))]),
             const SizedBox(height: 12),
             ...snapshot.data!.map((taslak) => _taslakKarti(taslak)).toList(),
           ]),
@@ -145,17 +218,17 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: koyuYuzey, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.orange.withOpacity(0.5))),
+      decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.orange.withOpacity(0.5))),
       child: Column(children: [
         Row(children: [
           Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), shape: BoxShape.circle), child: const Icon(Icons.design_services, color: Colors.orange)),
           const SizedBox(width: 16),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(taslak.carName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)), const SizedBox(height: 4), Text(taslak.stepLabel, style: const TextStyle(color: Colors.grey, fontSize: 12))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(taslak.carName, style: TextStyle(color: yaziRengi(), fontWeight: FontWeight.bold, fontSize: 14)), const SizedBox(height: 4), Text(taslak.stepLabel, style: TextStyle(color: ikinciYaziRengi(), fontSize: 12))])),
         ]),
         const SizedBox(height: 16),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           TextButton.icon(onPressed: () async { try { await ApiServisi().scanSil(taslak.scanId); setState(() { _taslakFuture = ApiServisi().taslaklariGetir(); }); } catch (_) {} }, icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18), label: Text(t('delete_draft'), style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold))),
-          ElevatedButton(onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (context) => const ModifiyeSecimSayfasi())); }, style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), child: Text(t('continue_btn'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12))),
+          ElevatedButton(onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (context) => ModifiyeSecimSayfasi(scanId: taslak.scanId, carName: taslak.carName, method: taslak.method))); }, style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), child: Text(t('continue_btn'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12))),
         ]),
       ]),
     );
@@ -163,34 +236,71 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
 }
 
 // ── TÜM GARAJ SAYFASI ──
-class TumGarajSayfasi extends StatelessWidget {
+class TumGarajSayfasi extends StatefulWidget {
   const TumGarajSayfasi({super.key});
+  @override
+  State<TumGarajSayfasi> createState() => _TumGarajSayfasiState();
+}
+
+class _TumGarajSayfasiState extends State<TumGarajSayfasi> {
+  late Future<List<Scan>> _garajFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _garajFuture = ApiServisi().garajiGetir();
+  }
+
   @override
   Widget build(BuildContext context) {
     final Color anaRenk = const Color(0xFF257bf4);
-    final Color koyuArkaplan = const Color(0xFF0A1017);
-    final Color koyuYuzey = const Color(0xFF182434);
     return Scaffold(
-      backgroundColor: koyuArkaplan,
+      backgroundColor: arkaplanRengi(),
       body: Stack(children: [
-        Positioned.fill(child: Image.network('https://images.unsplash.com/photo-1553440569-bcc63803a83d?q=80&w=1000&auto=format&fit=crop', fit: BoxFit.cover, errorBuilder: (c, e, s) => Container(color: koyuArkaplan))),
-        Positioned.fill(child: Container(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [koyuArkaplan.withOpacity(0.6), koyuArkaplan.withOpacity(0.95), koyuArkaplan])))),
+        Positioned.fill(child: Image.network('https://images.unsplash.com/photo-1553440569-bcc63803a83d?q=80&w=1000&auto=format&fit=crop', fit: BoxFit.cover, errorBuilder: (c, e, s) => Container(color: arkaplanRengi()))),
+        Positioned.fill(child: Container(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [arkaplanRengi().withOpacity(0.6), arkaplanRengi().withOpacity(0.95), arkaplanRengi()])))),
         SafeArea(child: Column(children: [
-          AppBar(backgroundColor: Colors.transparent, elevation: 0, leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)), title: Text(t('all_my_cars'), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)), centerTitle: true),
+          AppBar(backgroundColor: Colors.transparent, elevation: 0, leading: IconButton(icon: Icon(Icons.arrow_back, color: yaziRengi()), onPressed: () => Navigator.pop(context)), title: Text(t('all_my_cars'), style: TextStyle(color: yaziRengi(), fontSize: 18, fontWeight: FontWeight.bold)), centerTitle: true),
           Expanded(
             child: FutureBuilder<List<Scan>>(
-              future: ApiServisi().garajiGetir(),
+              future: _garajFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator(color: anaRenk));
                 if (snapshot.hasError) return Center(child: Text("Hata: ${snapshot.error}", style: const TextStyle(color: Colors.redAccent)));
-                if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text("Garajın şu an tamamen boş.", style: TextStyle(color: Colors.white, fontSize: 18)));
+                if (!snapshot.hasData || snapshot.data!.isEmpty) return Center(child: Text("Garajın şu an tamamen boş.", style: TextStyle(color: yaziRengi(), fontSize: 18)));
                 return ListView.builder(
                   padding: const EdgeInsets.all(24.0),
                   itemCount: snapshot.data!.length,
                   itemBuilder: (context, index) {
                     final scan = snapshot.data![index];
                     final thumbUrl = ApiServisi.buildImageUrl(scan.thumbnailUrl) ?? 'https://images.unsplash.com/photo-1603386329225-868f9b1ee6c9?q=80&w=1000';
-                    return Padding(padding: const EdgeInsets.only(bottom: 20), child: ArabaKartiOlusturucu.olustur(scan.carName, scan.method == '3d' ? '3D Model' : '2D Modifiye', thumbUrl, 'Tamamlandı', anaRenk, koyuYuzey));
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 20),
+                      child: ArabaKartiOlusturucu.olustur(
+                        scan.carName,
+                        scan.method == '3d' ? '3D Model' : '2D Modifiye',
+                        thumbUrl,
+                        'Tamamlandı',
+                        anaRenk,
+                        yuzeyRengi(),
+                        scanId: scan.scanId,
+                        onDuzenle: () { Navigator.push(context, MaterialPageRoute(builder: (c) => ModifiyeSecimSayfasi(scanId: scan.scanId, carName: scan.carName, method: scan.method))); },
+                        onPaylas: () async {
+                          try {
+                            await ApiServisi().toplulugaPaylas(scan.scanId);
+                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('car_shared')), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+                          } catch (e) {
+                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
+                          }
+                        },
+                        onSil: () async {
+                          try {
+                            await ApiServisi().scanSil(scan.scanId);
+                            if (mounted) { setState(() { _garajFuture = ApiServisi().garajiGetir(); }); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('car_deleted')), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating)); }
+                          } catch (_) {}
+                        },
+                      ),
+                    );
                   },
                 );
               },
@@ -201,4 +311,3 @@ class TumGarajSayfasi extends StatelessWidget {
     );
   }
 }
-

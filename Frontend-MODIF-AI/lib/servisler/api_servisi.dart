@@ -411,4 +411,53 @@ class ApiServisi {
       throw Exception('Taslak getirme hatası: ${response.statusCode}');
     }
   }
+
+  // ═══════════════════════════════════════════════════
+  //  HESAP SİLME
+  // ═══════════════════════════════════════════════════
+
+  Future<void> hesapSil() async {
+    final headers = await _authHeaders();
+    final response = await http
+        .delete(Uri.parse('$baseUrl/users/me'), headers: headers)
+        .timeout(_timeout);
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Hesap silme hatası: ${response.statusCode}');
+    }
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  TOPLULUKLA PAYLAŞMA
+  // ═══════════════════════════════════════════════════
+
+  Future<Map<String, dynamic>> toplulugaPaylas(int scanId) async {
+    final headers = await _authHeaders();
+    final response = await http
+        .post(Uri.parse('$baseUrl/community/$scanId/share'), headers: headers)
+        .timeout(_timeout);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Paylaşma hatası: ${response.statusCode}');
+    }
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  DAVET (REFERRAL) — +50 KREDİ
+  // ═══════════════════════════════════════════════════
+
+  Future<Map<String, dynamic>> davetPaylas() async {
+    final headers = await _authHeaders();
+    final response = await http
+        .post(Uri.parse('$baseUrl/store/referral'), headers: headers)
+        .timeout(_timeout);
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Davet hatası: ${response.statusCode}');
+    }
+  }
 }

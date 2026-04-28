@@ -194,3 +194,31 @@ async def get_my_credits(
         "subscription_tier": subscription.tier if subscription else "free",
         "subscription_end": sub_end,
     }
+
+
+# ─────────────────────────────────────────
+# REFERRAL (DAVET) - 50 KREDİ
+# ─────────────────────────────────────────
+
+@router.post("/referral", status_code=status.HTTP_200_OK, tags=["Store"])
+async def referral_bonus(
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Arkadaş davet eden kullanıcıya 50 kredi ekler."""
+
+    result = await db.execute(select(UserStats).where(UserStats.user_id == current_user.user_id))
+    user_stats = result.scalar_one_or_none()
+
+    if not user_stats:
+        raise HTTPException(status_code=404, detail="Kullanıcı istatistikleri bulunamadı.")
+
+    user_stats.user_credi += 50
+    await db.commit()
+    await db.refresh(user_stats)
+
+    return {
+        "message": "Davet bonusu eklendi!",
+        "credits_added": 50,
+        "current_credits": user_stats.user_credi,
+    }

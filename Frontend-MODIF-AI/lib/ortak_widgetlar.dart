@@ -15,8 +15,8 @@ class GlassHeader extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF182434).withOpacity(0.4),
-            border: const Border(bottom: BorderSide(color: Colors.white10, width: 0.5)),
+            color: yuzeyRengi().withOpacity(isDarkMode.value ? 0.4 : 0.85),
+            border: Border(bottom: BorderSide(color: kartBorderRengi(), width: 0.5)),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
           child: child,
@@ -32,15 +32,15 @@ void ortadanSecimDialoguGoster(BuildContext context) {
     context: context,
     builder: (BuildContext context) {
       return AlertDialog(
-        backgroundColor: const Color(0xFF182434),
+        backgroundColor: yuzeyRengi(),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(t('photo_source'), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text(t('photo_source'), textAlign: TextAlign.center, style: TextStyle(color: yaziRengi(), fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt, color: Colors.white),
-              title: Text(t('take_photo'), style: const TextStyle(color: Colors.white)),
+              leading: Icon(Icons.camera_alt, color: yaziRengi()),
+              title: Text(t('take_photo'), style: TextStyle(color: yaziRengi())),
               onTap: () {
                 Navigator.pop(context);
                 HapticFeedback.selectionClick();
@@ -49,8 +49,8 @@ void ortadanSecimDialoguGoster(BuildContext context) {
             ),
             const Divider(color: Colors.white10),
             ListTile(
-              leading: const Icon(Icons.photo_library, color: Colors.white),
-              title: Text(t('choose_gallery'), style: const TextStyle(color: Colors.white)),
+              leading: Icon(Icons.photo_library, color: yaziRengi()),
+              title: Text(t('choose_gallery'), style: TextStyle(color: yaziRengi())),
               onTap: () {
                 Navigator.pop(context);
                 HapticFeedback.selectionClick();
@@ -130,13 +130,13 @@ class _KesfetGonderisiCardState extends State<KesfetGonderisiCard> {
 
   @override
   Widget build(BuildContext context) {
-    final Color koyuYuzey = const Color(0xFF182434);
+    final Color koyuYuzey = yuzeyRengi();
 
     return Container(
       decoration: BoxDecoration(
         color: koyuYuzey,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: widget.isFire ? Colors.deepOrange : Colors.white.withOpacity(0.05)),
+        border: Border.all(color: widget.isFire ? Colors.deepOrange : kartBorderRengi()),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,9 +157,9 @@ class _KesfetGonderisiCardState extends State<KesfetGonderisiCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.baslik, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(widget.baslik, style: TextStyle(color: yaziRengi(), fontSize: 14, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 2),
-                Text('${t('by')}${widget.kullaniciAdi}', style: const TextStyle(color: Colors.grey, fontSize: 10), maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text('${t('by')}${widget.kullaniciAdi}', style: TextStyle(color: ikinciYaziRengi(), fontSize: 10), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 8),
 
                 InkWell(
@@ -199,10 +199,23 @@ class _KesfetGonderisiCardState extends State<KesfetGonderisiCard> {
   }
 }
 
+// Madde 7: ArabaKartiOlusturucu — işlevsel düzenle/paylaş/sil/3 nokta
 class ArabaKartiOlusturucu {
-  static Widget olustur(String baslik, String altBaslik, String resimUrl, String zaman, Color anaRenk, Color koyuYuzey) {
+  static Widget olustur(
+    String baslik,
+    String altBaslik,
+    String resimUrl,
+    String zaman,
+    Color anaRenk,
+    Color koyuYuzey, {
+    int? scanId,
+    VoidCallback? onDuzenle,
+    VoidCallback? onPaylas,
+    VoidCallback? onSil,
+    VoidCallback? onDetay,
+  }) {
     return Container(
-      decoration: BoxDecoration(color: koyuYuzey, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withOpacity(0.05))),
+      decoration: BoxDecoration(color: koyuYuzey, borderRadius: BorderRadius.circular(16), border: Border.all(color: kartBorderRengi())),
       child: Column(
         children: [
           Stack(
@@ -219,22 +232,47 @@ class ArabaKartiOlusturucu {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(baslik, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)), Text(altBaslik, style: const TextStyle(color: Colors.grey, fontSize: 12))]),
-                    const Icon(Icons.more_vert, color: Colors.grey),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(baslik, style: TextStyle(color: yaziRengi(), fontSize: 16, fontWeight: FontWeight.bold)), Text(altBaslik, style: TextStyle(color: ikinciYaziRengi(), fontSize: 12))])),
+                    // 3 nokta menüsü
+                    PopupMenuButton<String>(
+                      icon: Icon(Icons.more_vert, color: ikinciYaziRengi()),
+                      color: yuzeyRengi(),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'detay': onDetay?.call(); break;
+                          case 'sil': onSil?.call(); break;
+                        }
+                      },
+                      itemBuilder: (ctx) => [
+                        PopupMenuItem(value: 'detay', child: Row(children: [const Icon(Icons.info_outline, color: Colors.blueAccent, size: 18), const SizedBox(width: 8), Text(t('detail_btn'), style: TextStyle(color: yaziRengi()))])),
+                        PopupMenuItem(value: 'sil', child: Row(children: [const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18), const SizedBox(width: 8), Text(t('delete_btn'), style: const TextStyle(color: Colors.redAccent))])),
+                      ],
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                const Divider(color: Colors.white10, height: 1),
+                Divider(color: kartBorderRengi(), height: 1),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(children: [const Icon(Icons.schedule, color: Colors.grey, size: 14), const SizedBox(width: 4), Text(zaman, style: const TextStyle(color: Colors.grey, fontSize: 12))]),
+                    Row(children: [Icon(Icons.schedule, color: ikinciYaziRengi(), size: 14), const SizedBox(width: 4), Text(zaman, style: TextStyle(color: ikinciYaziRengi(), fontSize: 12))]),
                     Row(
                       children: [
-                        Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.share, color: Colors.white, size: 16)),
+                        // Paylaş butonu
+                        InkWell(
+                          onTap: onPaylas,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.share, color: Colors.green, size: 16)),
+                        ),
                         const SizedBox(width: 8),
-                        Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(color: anaRenk, borderRadius: BorderRadius.circular(8)), child: Text(t('edit'), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
+                        // Düzenle butonu
+                        InkWell(
+                          onTap: onDuzenle,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(color: anaRenk, borderRadius: BorderRadius.circular(8)), child: Text(t('edit'), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
+                        ),
                       ],
                     )
                   ],
@@ -247,12 +285,13 @@ class ArabaKartiOlusturucu {
     );
   }
 }
+
 // SİNEMATİK (ERİME) SAYFA GEÇİŞ MOTORU
 void yumusakGecisYap(BuildContext context, Widget gidilecekSayfa, {bool eskiSayfayiKapat = false}) {
-  HapticFeedback.lightImpact(); // Tıklama hissiyatı
+  HapticFeedback.lightImpact();
 
   var gecisAyari = PageRouteBuilder(
-    transitionDuration: const Duration(milliseconds: 400), // Geçiş hızı
+    transitionDuration: const Duration(milliseconds: 400),
     pageBuilder: (context, animation, secondaryAnimation) => gidilecekSayfa,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       return FadeTransition(
@@ -262,11 +301,9 @@ void yumusakGecisYap(BuildContext context, Widget gidilecekSayfa, {bool eskiSayf
     },
   );
 
-  // Eğer giriş yapma veya render başlama gibi geri dönülmeyecek bir sayfa ise eskisini kapat:
   if (eskiSayfayiKapat) {
     Navigator.pushReplacement(context, gecisAyari);
   } else {
-    // Normal ileri gitme:
     Navigator.push(context, gecisAyari);
   }
 }

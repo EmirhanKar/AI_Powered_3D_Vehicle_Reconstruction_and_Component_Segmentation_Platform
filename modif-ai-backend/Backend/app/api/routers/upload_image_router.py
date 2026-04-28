@@ -5,23 +5,37 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.database.db import get_session
 from app.database.schemas import ScanResponse, ScanCreate
-from app.database.crud import scanCreate, scanImageCreate, get_user_scans
-from app.database.crud import scan_crud
+from app.database.crud import scanCreate, scanImageCreate, get_user_scans, scan_crud
 from app.database.models import Scans, Processed3D, Processed2D, User, UserStats
 from typing import List
 from PIL import Image
 import os
 import uuid
-
 from app.api import get_current_user
 
 router = APIRouter(prefix="/scans")
 
-# ── KREDİ MALİYETLERİ ──────────────────────────────
+# ── KREDİ MALİYETLERİ ──
 # İleride değiştirilecekse buradan düzenle
-CREDIT_COST_2D = 10
-CREDIT_COST_3D = 25
-# ───────────────────────────────────────────────────
+CREDIT_COST_2D = 30
+CREDIT_COST_3D = 50
+
+# ── KABUL EDİLEN FORMATLAR ──
+# Flutter'dan gelen fotoğraflar farklı MIME type'larla gelebilir
+ALLOWED_CONTENT_TYPES = {
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+}
+
+# Fotoğraf sayısı kuralları
+PHOTO_COUNTS = {
+    "2d": 4,
+    "3d": 8,
+}
 
 
 @router.post("/upload_image", status_code=status.HTTP_201_CREATED, response_model=ScanResponse)
@@ -33,15 +47,18 @@ async def upload_image(
     db: AsyncSession = Depends(get_session),
     current_user=Depends(get_current_user)
 ):
-    if len(files) != 8:
-        raise HTTPException(status_code=400, detail="Lütfen tam olarak 8 adet fotoğraf yükleyin!")
-
     if method not in ["2d", "3d"]:
         raise HTTPException(status_code=400, detail="Method '2d' veya '3d' olmalıdır.")
 
-    # ── KREDİ KONTROLÜ ──────────────────────────────
-    cost = CREDIT_COST_3D if method == "3d" else CREDIT_COST_2D
+    beklenen_sayi = PHOTO_COUNTS[method]
+    if len(files) != beklenen_sayi:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{method.upper()} için tam olarak {beklenen_sayi} fotoğraf gerekli! ({len(files)} gönderildi)"
+        )
 
+    # ── KREDİ KONTROLÜ ──
+    cost = CREDIT_COST_3D if method == "3d" else CREDIT_COST_2D
     stats_result = await db.execute(select(UserStats).where(UserStats.user_id == current_user.user_id))
     user_stats = stats_result.scalar_one_or_none()
 
@@ -50,7 +67,6 @@ async def upload_image(
             status_code=402,
             detail=f"Yetersiz kredi. Bu işlem {cost} kredi gerektiriyor."
         )
-    # ────────────────────────────────────────────────
 
     new_scan = await scanCreate(
         db,
@@ -68,48 +84,85 @@ async def upload_image(
     saved_paths = []
 
     for file in files:
-        if file.content_type not in ["image/jpeg", "image/png"]:
-            raise HTTPException(status_code=400, detail="Sadece JPEG ve PNG kabul edilir.")
+        # Content type kontrolü — None gelirse dosya uzantısına bak
+        content_type = file.content_type or ""
+        filename = file.filename or ""
+        ext = filename.lower().split(".")[-1] if "." in filename else ""
 
-        extension = file.filename.split(".")[-1]
-        unique_name = f"{uuid.uuid4()}.{extension}"
+        gecerli_mi = (
+            content_type in ALLOWED_CONTENT_TYPES or
+            ext in {"jpg", "jpeg", "png", "webp", "heic", "heif"}
+        )
+
+        if not gecerli_mi:
+            raise HTTPException(
+                status_code=400,
+                detail=f"'{filename}' desteklenmiyor. JPEG, PNG, WEBP, HEIC kabul edilir."
+            )
+
+        unique_name = f"{uuid.uuid4()}.jpg"  # hepsini jpg olarak kaydet
         main_path = os.path.join(base_images_dir, unique_name).replace("\\", "/")
 
         content = await file.read()
-        with open(main_path, "wb") as buffer:
-            buffer.write(content)
+
+        # Pillow ile standart JPEG'e dönüştür (HEIC dahil tüm formatlar için)
+        try:
+            import io
+            img = Image.open(io.BytesIO(content))
+            img = img.convert("RGB")
+            img.save(main_path, "JPEG", quality=85)
+        except Exception:
+            # Pillow açamazsa direkt kaydet
+            with open(main_path, "wb") as buffer:
+                buffer.write(content)
 
         saved_paths.append(main_path)
 
-        await scanImageCreate(
-            db=db,
-            scan_id=new_scan.scan_id,
-            image_url=main_path
-        )
+        await scanImageCreate(db=db, scan_id=new_scan.scan_id, image_url=main_path)
 
-    # Thumbnail oluştur (Pillow ile küçült)
+    # Thumbnail oluştur
     thumb_dir = os.path.join("uploads", "thumbnails", user_id_str)
     os.makedirs(thumb_dir, exist_ok=True)
     thumb_path = os.path.join(thumb_dir, f"thumb_{new_scan.scan_id}.jpg").replace("\\", "/")
-
-    with Image.open(saved_paths[0]) as img:
-        img.thumbnail((400, 400))
-        img.convert("RGB").save(thumb_path, "JPEG")
-
+ 
+    try:
+        with Image.open(saved_paths[0]) as img:
+            img = img.convert("RGB")
+            img.thumbnail((400, 400))
+            img.save(thumb_path, "JPEG", quality=85)
+    except Exception as e:
+        # Pillow açamazsa dosyayı direkt kopyala
+        import shutil
+        shutil.copy2(saved_paths[0], thumb_path)
+ 
+    # Thumbnail dosyası oluştu mu kontrol et
+    if not os.path.exists(thumb_path):
+        # Son çare: ilk fotoğrafın yolunu thumbnail olarak kullan
+        thumb_path = saved_paths[0]
+        
+        # ── PROCESSED KAYDINI OLUŞTUR (EKSİK OLAN KISIM BURASI) ──
+    
     if method == "3d":
-        new_task = Processed3D(scan_id=new_scan.scan_id, thumbnail_url=thumb_path)
+        new_task = Processed3D(
+            scan_id=new_scan.scan_id,
+            thumbnail_url=thumb_path,
+            status="pending"
+        )
+        db.add(new_task)
     else:
-        new_task = Processed2D(scan_id=new_scan.scan_id, thumbnail_url=thumb_path)
+        new_task = Processed2D(
+            scan_id=new_scan.scan_id,
+            thumbnail_url=thumb_path,
+            status="pending"
+        )
+        db.add(new_task)
 
-    db.add(new_task)
-
-    # ── KREDİ DÜŞME ─────────────────────────────────
+    # Kredi düş, istatistik güncelle
     user_stats.user_credi -= cost
-    user_stats.create_image += 1  # Toplam oluşturma sayısını artır
-    # ────────────────────────────────────────────────
+    user_stats.create_image += 1
 
     await db.commit()
-    
+
     result = await db.execute(
         select(Scans)
         .where(Scans.scan_id == new_scan.scan_id)
@@ -138,7 +191,6 @@ async def complete_3d_model(
     model_file: UploadFile = File(...),
     db: AsyncSession = Depends(get_session)
 ):
-    """AI servisi 3D modeli tamamlayınca buraya yükler."""
     result = await db.execute(select(Processed3D).where(Processed3D.scan_id == scan_id))
     task = result.scalar_one_or_none()
 
@@ -156,16 +208,6 @@ async def complete_3d_model(
         f.write(content)
 
     task.model_url = full_path
-
-    # render_image sayısını artır
-    scan_result = await db.execute(select(Scans).where(Scans.scan_id == scan_id))
-    scan = scan_result.scalar_one_or_none()
-    if scan:
-        stats_result = await db.execute(select(UserStats).where(UserStats.user_id == scan.user_id))
-        user_stats = stats_result.scalar_one_or_none()
-        if user_stats:
-            user_stats.render_image += 1
-
     await db.execute(update(Scans).where(Scans.scan_id == scan_id).values(status="completed"))
     await db.commit()
 
@@ -178,20 +220,16 @@ async def complete_2d_model(
     image_file: UploadFile = File(...),
     db: AsyncSession = Depends(get_session)
 ):
-    """AI servisi 2D sonucu tamamlayınca buraya yükler."""
     result = await db.execute(select(Processed2D).where(Processed2D.scan_id == scan_id))
     task = result.scalar_one_or_none()
 
     if not task:
         raise HTTPException(status_code=404, detail=f"{scan_id} ID'li 2D tarama bulunamadı!")
 
-    if image_file.content_type not in ["image/jpeg", "image/png", "image/webp"]:
-        raise HTTPException(status_code=400, detail="Sadece JPEG, PNG veya WEBP kabul edilir.")
-
     upload_path = os.path.join("uploads", "images_2d", f"scan_{scan_id}")
     os.makedirs(upload_path, exist_ok=True)
 
-    extension = image_file.filename.split(".")[-1]
+    extension = (image_file.filename or "result").split(".")[-1]
     unique_filename = f"result_{uuid.uuid4()}.{extension}"
     full_path = os.path.join(upload_path, unique_filename).replace("\\", "/")
 
@@ -201,16 +239,6 @@ async def complete_2d_model(
 
     task.image_url = full_path
     task.thumbnail_url = full_path
-
-    # render_image sayısını artır
-    scan_result = await db.execute(select(Scans).where(Scans.scan_id == scan_id))
-    scan = scan_result.scalar_one_or_none()
-    if scan:
-        stats_result = await db.execute(select(UserStats).where(UserStats.user_id == scan.user_id))
-        user_stats = stats_result.scalar_one_or_none()
-        if user_stats:
-            user_stats.render_image += 1
-
     await db.execute(update(Scans).where(Scans.scan_id == scan_id).values(status="completed"))
     await db.commit()
 
@@ -222,7 +250,6 @@ async def get_my_scans(
     db: AsyncSession = Depends(get_session),
     current_user=Depends(get_current_user)
 ):
-    """Kullanıcının tamamlanmış araçlarını listeler."""
     scans = await get_user_scans(db, user_id=current_user.user_id)
     return scans
 
@@ -233,7 +260,6 @@ async def get_scan_details(
     db: AsyncSession = Depends(get_session),
     current_user=Depends(get_current_user)
 ):
-    """Garajdaki tek bir aracın detayını getirir."""
     scan = await scan_crud.get_scan_by_id(db, scan_id=scan_id, user_id=current_user.user_id)
     if not scan:
         raise HTTPException(status_code=404, detail="Araç bulunamadı.")
@@ -246,7 +272,6 @@ async def get_scan_detail(
     db: AsyncSession = Depends(get_session),
     current_user=Depends(get_current_user)
 ):
-    """Scan ID ile tarama detayını getirir."""
     result = await db.execute(
         select(Scans)
         .where(Scans.scan_id == scan_id)
@@ -256,7 +281,6 @@ async def get_scan_detail(
 
     if not scan:
         raise HTTPException(status_code=404, detail="Tarama bulunamadı!")
-
     if scan.user_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Bu veriye erişim yetkiniz yok.")
 
@@ -269,7 +293,6 @@ async def delete_scan(
     db: AsyncSession = Depends(get_session),
     current_user=Depends(get_current_user)
 ):
-    """Taramayı ve tüm ilişkili verileri siler."""
     result = await db.execute(select(Scans).where(Scans.scan_id == scan_id))
     scan = result.scalar_one_or_none()
 

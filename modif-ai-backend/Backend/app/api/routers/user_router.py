@@ -105,44 +105,68 @@ async def get_my_profil(db : AsyncSession = Depends(get_session),current_user: U
     }
     
     
+# user_router.py içindeki upload_profile_photo endpoint'ini bununla değiştir
+
 @router.post("/me/upload-photo", response_model=UserResponse)
 async def upload_profile_photo(
     photo: UploadFile = File(...),
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    # 1. Sadece resim kabul et
-    if photo.content_type not in ["image/jpeg", "image/png", "image/webp"]:
+    # Content type kontrolü — Flutter'dan image/jpg veya None gelebilir
+    ALLOWED_TYPES = {"image/jpeg", "image/jpg", "image/png", "image/webp", "image/heic", "image/heif"}
+    content_type = photo.content_type or ""
+    filename = photo.filename or ""
+    ext = filename.lower().split(".")[-1] if "." in filename else ""
+
+    gecerli_mi = (
+        content_type in ALLOWED_TYPES or
+        ext in {"jpg", "jpeg", "png", "webp", "heic", "heif"}
+    )
+
+    if not gecerli_mi:
         raise HTTPException(
             status_code=400,
-            detail="Sadece JPEG, PNG veya WEBP kabul edilir."
+            detail=f"Desteklenmeyen format: '{content_type}'. JPEG, PNG, WEBP veya HEIC yükleyin."
         )
- 
-    # 2. Dosyayı kaydet
+
+    # Dosyayı kaydet
     upload_dir = os.path.join("uploads", "profiles")
     os.makedirs(upload_dir, exist_ok=True)
- 
-    extension = photo.filename.split(".")[-1]
-    unique_filename = f"profile_{current_user.user_id}_{uuid.uuid4()}.{extension}"
+
+    unique_filename = f"profile_{current_user.user_id}_{uuid.uuid4()}.jpg"
     full_path = os.path.join(upload_dir, unique_filename).replace("\\", "/")
- 
+
     content = await photo.read()
-    with open(full_path, "wb") as f:
-        f.write(content)
- 
-    # 3. Eski fotoğraf varsa sil
+
+    # Pillow ile JPEG'e dönüştür (HEIC dahil her format çalışır)
+    try:
+        import io
+        from PIL import Image
+        img = Image.open(io.BytesIO(content))
+        img = img.convert("RGB")
+        img.thumbnail((800, 800))
+        img.save(full_path, "JPEG", quality=85)
+    except Exception:
+        # Pillow açamazsa direkt kaydet
+        with open(full_path, "wb") as f:
+            f.write(content)
+
+    # Eski fotoğrafı sil
     if current_user.profil_image_url and os.path.exists(current_user.profil_image_url):
-        os.remove(current_user.profil_image_url)
- 
-    # 4. DB'yi güncelle
+        try:
+            os.remove(current_user.profil_image_url)
+        except Exception:
+            pass  # Eski dosya yoksa sorun yok
+
+    # DB güncelle
     current_user.profil_image_url = full_path
     await db.commit()
     await db.refresh(current_user)
- 
-    # 5. UserStats'ı da çek (UserResponse için gerekli)
+
     result = await db.execute(select(UserStats).where(UserStats.user_id == current_user.user_id))
     user_stats = result.scalar()
- 
+
     return {
         "user_id": current_user.user_id,
         "name": current_user.name,

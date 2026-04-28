@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'sistem_ve_dil.dart';
 import 'sayfalar_ana.dart';
 
-void main() {
-  // Uygulamayı başlatan ana komut
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await temaYukle();
   runApp(const ArabaApp());
 }
 
@@ -15,30 +16,52 @@ class ArabaApp extends StatelessWidget {
     return ValueListenableBuilder<String>(
       valueListenable: appLanguage,
       builder: (context, currentLang, child) {
-        return MaterialApp(
-          // Uygulamanın yeni karizmatik ismi
-          title: 'Modif AI',
+        return ValueListenableBuilder<bool>(
+          valueListenable: isDarkMode,
+          builder: (context, dark, child) {
+            return MaterialApp(
+              title: 'Modif AI',
+              debugShowCheckedModeBanner: false,
 
-          // Sağ üstteki 'Debug' yazısını kaldırır
-          debugShowCheckedModeBanner: false,
+              theme: ThemeData(
+                brightness: Brightness.light,
+                scaffoldBackgroundColor: const Color(0xFFF5F7FA),
+                primaryColor: const Color(0xFF257bf4),
+                fontFamily: 'Roboto',
+                colorScheme: ColorScheme.light(
+                  primary: const Color(0xFF257bf4),
+                  surface: Colors.white,
+                ),
+                pageTransitionsTheme: const PageTransitionsTheme(
+                  builders: {
+                    TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+                    TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+                  },
+                ),
+              ),
 
-          theme: ThemeData(
-            brightness: Brightness.dark,
-            scaffoldBackgroundColor: const Color(0xFF0A1017),
-            primaryColor: const Color(0xFF257bf4),
-            fontFamily: 'Roboto',
+              darkTheme: ThemeData(
+                brightness: Brightness.dark,
+                scaffoldBackgroundColor: const Color(0xFF0A1017),
+                primaryColor: const Color(0xFF257bf4),
+                fontFamily: 'Roboto',
+                colorScheme: ColorScheme.dark(
+                  primary: const Color(0xFF257bf4),
+                  surface: const Color(0xFF182434),
+                ),
+                pageTransitionsTheme: const PageTransitionsTheme(
+                  builders: {
+                    TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+                    TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+                  },
+                ),
+              ),
 
-            // Bütün uygulama genelinde yumuşak geçiş ayarı
-            pageTransitionsTheme: const PageTransitionsTheme(
-              builders: {
-                TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
-                TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-              },
-            ),
-          ),
+              themeMode: dark ? ThemeMode.dark : ThemeMode.light,
 
-          // --- KRİTİK NOKTA: Uygulama artık Açılış Ekranı ile başlayacak ---
-          home: const AcilisSayfasi(),
+              home: const AcilisSayfasi(),
+            );
+          },
         );
       },
     );

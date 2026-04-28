@@ -1,7 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // --- DİL ALTYAPISI (LOCALIZATION) ---
 final ValueNotifier<String> appLanguage = ValueNotifier('tr');
+
+// --- TEMA ALTYAPISI ---
+final ValueNotifier<bool> isDarkMode = ValueNotifier(true); // default koyu
+
+Future<void> temaYukle() async {
+  final prefs = await SharedPreferences.getInstance();
+  isDarkMode.value = prefs.getBool('dark_mode') ?? true;
+}
+
+Future<void> temaKaydet(bool dark) async {
+  isDarkMode.value = dark;
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool('dark_mode', dark);
+}
+
+// Tema renkleri yardımcı fonksiyonlar
+Color arkaplanRengi() => isDarkMode.value ? const Color(0xFF0A1017) : const Color(0xFFF5F7FA);
+Color yuzeyRengi() => isDarkMode.value ? const Color(0xFF182434) : Colors.white;
+Color yaziRengi() => isDarkMode.value ? Colors.white : const Color(0xFF1A1A2E);
+Color ikinciYaziRengi() => isDarkMode.value ? Colors.grey : Colors.grey.shade600;
+Color kartBorderRengi() => isDarkMode.value ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.15);
 
 final Map<String, Map<String, String>> translations = {
   'tr': {
@@ -82,7 +104,8 @@ final Map<String, Map<String, String>> translations = {
     'start_prod': 'Üretimi Başlat',
     'not_enough_credit': 'Kredin Yetersiz Mi? Kredi Satın Al',
     'completed_up': 'TAMAMLANDI',
-    'ai_processing': 'AI İŞLİYOR...',
+    'ai_processing': 'İŞLEMİNİZ DEVAM EDİYOR...',
+    'ai_processing_desc': 'Yapay zeka aracınızı işliyor, lütfen bekleyiniz...',
     'ready': 'Hazır!',
     'remaining': 'Kalan: ',
     'min': 'Dk',
@@ -91,11 +114,12 @@ final Map<String, Map<String, String>> translations = {
     'best': 'En İyi: ',
     'close_call': 'KIL PAYI!\n+50',
     'render_finished': 'RENDER BİTTİ!',
+    'render_done_banner': '✅ Render Tamamlandı! Görüntülemek için dokunun.',
     'crashed': '💥 KAZA YAPTIN!',
     'play_again': 'Tekrar Oyna',
     'top_of_week': 'Haftanın En İyileri',
     'coming_soon': '... (Çok Yakında)',
-    'community_legends': 'Topluluğun Efsaneleri (Haftanın En İyileri)',
+    'community_legends': 'Topluluğun Efsaneleri',
     'return_garage': 'Garaja Dön',
     'all_my_cars': 'Tüm Araçlarım',
     'select_lang_title': 'Dil Seçin / Select Language',
@@ -111,21 +135,71 @@ final Map<String, Map<String, String>> translations = {
     'select_avatar': 'Hazır Avatarlar',
     'select_project_type': 'Proje Tipini Seç',
     '2d_mod': '2D Fotoğraf Modifiyesi',
-    '2d_desc': 'Tek bir fotoğraf üzerinden anında modifiye yap.',
+    '2d_desc': '4 fotoğraf ile anında modifiye yap.',
     '3d_mod': '3D Model Çıkarma',
-    '3d_desc': '4 farklı açıdan aracını 3 boyutlu modele çevir.',
+    '3d_desc': '8 farklı açıdan aracını 3 boyutlu modele çevir.',
     'photo_source': 'Fotoğraf Kaynağı',
-    'level': 'Seviye',
-    'apprentice': 'Çırak',
-    'journeyman': 'Kalfa',
-    'master': 'Usta',
-    'senior': 'Kıdemli',
-    'grandmaster': 'Baş Usta',
-    'all_ranks': 'Tüm Rütbeler Ve Seviyeler',
-    'target': 'Hedef',
-    'max_level': 'Maksimum Seviye',
-    'renders_needed': 'Render',
-    'current_rank': 'Şu Anki Rütben',
+    'welcome_greeting': 'Hoş Geldin',
+    'delete_account': '🗑️ Hesabımı Sil',
+    'delete_account_title': 'Hesabı Sil',
+    'delete_account_confirm': 'Hesabınızı silmek istediğinize emin misiniz?\nBu işlem geri alınamaz ve tüm verileriniz kalıcı olarak silinecektir.',
+    'delete_account_btn': 'Evet, Hesabımı Sil',
+    'cancel': 'İptal',
+    'legal_title': 'Yasal Bilgiler',
+    'kvkk': 'KVKK Aydınlatma Metni',
+    'terms': 'Kullanım Koşulları',
+    'privacy': 'Gizlilik Politikası',
+    'notifications_title': 'Bildirimler',
+    'no_notifications': 'Henüz bildirim yok',
+    'render_notif': 'render oluştu',
+    'share_to_community': 'Toplulukla Paylaş',
+    'select_car_share': 'Paylaşmak istediğiniz aracı seçin',
+    'shared_success': 'Araç başarıyla toplulukla paylaşıldı!',
+    'credit_cost': 'Kredi',
+    // SSS
+    'faq_title': 'Yardım ve Destek',
+    'faq_1_q': 'Kredi nasıl satın alınır?',
+    'faq_1_a': 'Mağaza sekmesinden istediğiniz paketi seçerek kredi satın alabilirsiniz. Satın aldığınız krediler anında hesabınıza yüklenir.',
+    'faq_2_q': 'Render ne kadar sürer?',
+    'faq_2_a': 'Render işlemi yaklaşık 3 dakika sürer. Bu süre boyunca eğlenceli bir araba oyunu oynayabilirsiniz!',
+    'faq_3_q': '2D ve 3D arasındaki fark nedir?',
+    'faq_3_a': '2D modifiye, aracınızın fotoğraflarına renk ve jant değişikliği uygular. 3D ise aracınızın tam 3 boyutlu modelini çıkarır. 2D: 30 kredi, 3D: 50 kredi.',
+    'faq_4_q': 'Kredim yetmezse ne olur?',
+    'faq_4_a': 'Yetersiz krediniz varsa render başlatılamaz. Mağazadan kredi satın alabilir veya arkadaşlarınızı davet ederek 50 bonus kredi kazanabilirsiniz.',
+    'faq_5_q': 'Render kalitesi nasıl artar?',
+    'faq_5_a': 'Yüklediğiniz fotoğrafların net ve iyi aydınlatılmış olması render kalitesini doğrudan etkiler. Farklı açılardan çekilen net fotoğraflar en iyi sonucu verir.',
+    'faq_6_q': 'Hesabımı nasıl silebilirim?',
+    'faq_6_a': 'Profil > Ayarlar > Hesabımı Sil seçeneğinden hesabınızı kalıcı olarak silebilirsiniz. Bu işlem geri alınamaz.',
+    'faq_7_q': 'Toplulukta paylaşım nasıl yapılır?',
+    'faq_7_a': 'Keşfet sekmesindeki "Toplulukla Paylaş" butonuna basarak garajınızdaki tamamlanmış araçları paylaşabilirsiniz.',
+    'faq_8_q': 'İletişim bilgileri',
+    'faq_8_a': 'Destek için modifai.destek@gmail.com adresine e-posta gönderebilirsiniz. Sosyal medya hesaplarımızı takip ederek güncellemelerden haberdar olabilirsiniz.',
+    // Davet
+    'invite_title': 'Arkadaşını Davet Et',
+    'invite_desc': 'Aşağıdaki platformlardan birini seçerek uygulama linkini paylaş ve 50 kredi kazan!',
+    'invite_link_copied': 'Uygulama linki kopyalandı!',
+    'invite_success': 'Davet paylaşıldı! +50 kredi eklendi.',
+    'invite_share_text': 'Modif AI ile arabana harika modifikasyonlar yap! İndir: https://modifai.app/download',
+    // Tema
+    'theme_title': 'Tema Seçimi',
+    'theme_dark': 'Koyu Tema',
+    'theme_light': 'Açık Tema',
+    'theme_select': '🎨 Tema Seçimi',
+    // Yorum
+    'comments': 'Yorumlar',
+    'write_comment': 'Yorum yaz...',
+    'send': 'Gönder',
+    'no_comments': 'Henüz yorum yok. İlk yorumu sen yaz!',
+    // Garaj
+    'share_btn': 'Paylaş',
+    'delete_btn': 'Sil',
+    'detail_btn': 'Detay',
+    'delete_car_confirm': 'Bu aracı silmek istediğinize emin misiniz?',
+    'car_deleted': 'Araç başarıyla silindi!',
+    'car_shared': 'Araç toplulukla paylaşıldı!',
+    // Render
+    'view_render': 'Görüntüle',
+    'render_complete_view': '✅ Render Tamamlandı! Görüntülemek için dokunun.',
   },
   'en': {
     'app_title': 'AI Auto Studio',
@@ -205,7 +279,8 @@ final Map<String, Map<String, String>> translations = {
     'start_prod': 'Start Production',
     'not_enough_credit': 'Not Enough Credits? Buy Credits',
     'completed_up': 'COMPLETED',
-    'ai_processing': 'AI PROCESSING...',
+    'ai_processing': 'PROCESSING YOUR REQUEST...',
+    'ai_processing_desc': 'AI is processing your car, please wait...',
     'ready': 'Ready!',
     'remaining': 'Remaining: ',
     'min': 'Min',
@@ -214,11 +289,12 @@ final Map<String, Map<String, String>> translations = {
     'best': 'Best: ',
     'close_call': 'CLOSE CALL!\n+50',
     'render_finished': 'RENDER FINISHED!',
+    'render_done_banner': '✅ Render Complete! Tap to view.',
     'crashed': '💥 YOU CRASHED!',
     'play_again': 'Play Again',
     'top_of_week': 'Top Of The Week',
     'coming_soon': '... (Coming Soon)',
-    'community_legends': 'Community Legends (Top Of The Week)',
+    'community_legends': 'Community Legends',
     'return_garage': 'Return To Garage',
     'all_my_cars': 'All My Cars',
     'select_lang_title': 'Select Language / Dil Seçin',
@@ -234,21 +310,71 @@ final Map<String, Map<String, String>> translations = {
     'select_avatar': 'Ready Avatars',
     'select_project_type': 'Select Project Type',
     '2d_mod': '2D Photo Modification',
-    '2d_desc': 'Instantly modify a single photo.',
+    '2d_desc': 'Modify with 4 photos instantly.',
     '3d_mod': '3D Model Generation',
-    '3d_desc': 'Turn your car into a 3D model from 4 angles.',
+    '3d_desc': 'Turn your car into a 3D model from 8 angles.',
     'photo_source': 'Photo Source',
-    'level': 'Level',
-    'apprentice': 'Apprentice',
-    'journeyman': 'Journeyman',
-    'master': 'Master',
-    'senior': 'Senior',
-    'grandmaster': 'Grandmaster',
-    'all_ranks': 'All Ranks And Levels',
-    'target': 'Target',
-    'max_level': 'Max Level',
-    'renders_needed': 'Renders',
-    'current_rank': 'Current Rank',
+    'welcome_greeting': 'Welcome',
+    'delete_account': '🗑️ Delete Account',
+    'delete_account_title': 'Delete Account',
+    'delete_account_confirm': 'Are you sure you want to delete your account?\nThis action cannot be undone and all your data will be permanently deleted.',
+    'delete_account_btn': 'Yes, Delete My Account',
+    'cancel': 'Cancel',
+    'legal_title': 'Legal Information',
+    'kvkk': 'Data Protection Notice',
+    'terms': 'Terms of Use',
+    'privacy': 'Privacy Policy',
+    'notifications_title': 'Notifications',
+    'no_notifications': 'No notifications yet',
+    'render_notif': 'render created',
+    'share_to_community': 'Share With Community',
+    'select_car_share': 'Select a car to share',
+    'shared_success': 'Car successfully shared with the community!',
+    'credit_cost': 'Credits',
+    // FAQ
+    'faq_title': 'Help & Support',
+    'faq_1_q': 'How to buy credits?',
+    'faq_1_a': 'You can purchase credits by selecting a package from the Store tab. Your credits are added to your account instantly.',
+    'faq_2_q': 'How long does a render take?',
+    'faq_2_a': 'Rendering takes approximately 3 minutes. You can play a fun car game while waiting!',
+    'faq_3_q': 'What is the difference between 2D and 3D?',
+    'faq_3_a': '2D modification applies color and wheel changes to your car photos. 3D generates a full 3D model of your car. 2D: 30 credits, 3D: 50 credits.',
+    'faq_4_q': 'What happens if I don\'t have enough credits?',
+    'faq_4_a': 'You cannot start a render without enough credits. Buy credits from the Store or invite friends to earn 50 bonus credits.',
+    'faq_5_q': 'How to improve render quality?',
+    'faq_5_a': 'Clear, well-lit photos taken from different angles directly improve render quality.',
+    'faq_6_q': 'How to delete my account?',
+    'faq_6_a': 'Go to Profile > Settings > Delete Account to permanently delete your account. This action cannot be undone.',
+    'faq_7_q': 'How to share in the community?',
+    'faq_7_a': 'Tap "Share With Community" button in the Discover tab to share your completed cars.',
+    'faq_8_q': 'Contact information',
+    'faq_8_a': 'For support, send an email to modifai.destek@gmail.com. Follow our social media accounts for updates.',
+    // Invite
+    'invite_title': 'Invite a Friend',
+    'invite_desc': 'Share the app link via one of the platforms below and earn 50 credits!',
+    'invite_link_copied': 'App link copied!',
+    'invite_success': 'Invite shared! +50 credits added.',
+    'invite_share_text': 'Create amazing car modifications with Modif AI! Download: https://modifai.app/download',
+    // Theme
+    'theme_title': 'Theme Selection',
+    'theme_dark': 'Dark Theme',
+    'theme_light': 'Light Theme',
+    'theme_select': '🎨 Theme Selection',
+    // Comment
+    'comments': 'Comments',
+    'write_comment': 'Write a comment...',
+    'send': 'Send',
+    'no_comments': 'No comments yet. Be the first to comment!',
+    // Garage
+    'share_btn': 'Share',
+    'delete_btn': 'Delete',
+    'detail_btn': 'Detail',
+    'delete_car_confirm': 'Are you sure you want to delete this car?',
+    'car_deleted': 'Car successfully deleted!',
+    'car_shared': 'Car shared with the community!',
+    // Render
+    'view_render': 'View',
+    'render_complete_view': '✅ Render Complete! Tap to view.',
   }
 };
 

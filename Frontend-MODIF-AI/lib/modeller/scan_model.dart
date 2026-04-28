@@ -7,6 +7,7 @@ class Scan {
   final String carName;
   final String? description;
   final String? thumbnailUrl;
+  final String? modelUrl; // 3D model hazırsa dolu gelir
 
   Scan({
     required this.scanId,
@@ -16,6 +17,7 @@ class Scan {
     required this.carName,
     this.description,
     this.thumbnailUrl,
+    this.modelUrl,
   });
 
   factory Scan.fromJson(Map<String, dynamic> json) {
@@ -27,8 +29,10 @@ class Scan {
       carName: json['car_name'] ?? '',
       description: json['description'],
       thumbnailUrl: json['thumbnail_url'],
+      modelUrl: json['model_url'], // EKLENDİ
     );
   }
 
   bool get isCompleted => status == 'completed';
+  bool get has3DModel => modelUrl != null && modelUrl!.isNotEmpty;
 }
