@@ -14,7 +14,14 @@ class SekmeProfil extends StatefulWidget {
   final VoidCallback? onTopUpTap;
   final VoidCallback? onLangTap;
   final VoidCallback? onProfileUpdated;
-  const SekmeProfil({super.key, this.kullanici, this.kredi = 0, this.onTopUpTap, this.onLangTap, this.onProfileUpdated});
+  const SekmeProfil({
+    super.key,
+    this.kullanici,
+    this.kredi = 0,
+    this.onTopUpTap,
+    this.onLangTap,
+    this.onProfileUpdated,
+  });
   @override
   State<SekmeProfil> createState() => _SekmeProfilState();
 }
@@ -75,7 +82,8 @@ KVKK kapsamında; kişisel verilerinizin işlenip işlenmediğini öğrenme, sil
 
 İletişim: modifai.destek@gmail.com''';
     } else if (baslik.contains('Kullanım') || baslik.contains('Terms')) {
-      icerik = '''KULLANIM KOŞULLARI
+      icerik =
+          '''KULLANIM KOŞULLARI
 
 Son güncellenme: ${DateTime.now().year}
 
@@ -103,7 +111,8 @@ Uygulama "olduğu gibi" sunulmaktadır. Render kalitesi, fotoğraf kalitesine ba
 
 İletişim: modifai.destek@gmail.com''';
     } else {
-      icerik = '''GİZLİLİK POLİTİKASI
+      icerik =
+          '''GİZLİLİK POLİTİKASI
 
 Son güncellenme: ${DateTime.now().year}
 
@@ -134,26 +143,52 @@ Uygulama içi oturum yönetimi için yerel depolama kullanılır.
 Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
     }
 
-    Navigator.push(context, MaterialPageRoute(builder: (c) {
-      return Scaffold(
-        backgroundColor: arkaplanRengi(),
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(icon: Icon(Icons.arrow_back, color: yaziRengi()), onPressed: () => Navigator.pop(c)),
-          title: Text(baslik, style: TextStyle(color: yaziRengi(), fontSize: 16, fontWeight: FontWeight.bold)),
-          centerTitle: true,
-        ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(16), border: Border.all(color: kartBorderRengi())),
-            child: Text(icerik, style: TextStyle(color: yaziRengi(), fontSize: 13, height: 1.7)),
-          ),
-        ),
-      );
-    }));
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (c) {
+          return Scaffold(
+            backgroundColor: arkaplanRengi(),
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back, color: yaziRengi()),
+                onPressed: () => Navigator.pop(c),
+              ),
+              title: Text(
+                baslik,
+                style: TextStyle(
+                  color: yaziRengi(),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              centerTitle: true,
+            ),
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: yuzeyRengi(),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: kartBorderRengi()),
+                ),
+                child: Text(
+                  icerik,
+                  style: TextStyle(
+                    color: yaziRengi(),
+                    fontSize: 13,
+                    height: 1.7,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   // Madde 11: Tema seçimi
@@ -162,62 +197,157 @@ Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
     showModalBottomSheet(
       context: context,
       backgroundColor: yuzeyRengi(),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) {
         return SafeArea(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Padding(padding: const EdgeInsets.all(16), child: Text(t('theme_title'), style: TextStyle(color: yaziRengi(), fontSize: 20, fontWeight: FontWeight.bold))),
-            ListTile(
-              leading: Container(
-                width: 40, height: 40,
-                decoration: BoxDecoration(color: const Color(0xFF0A1017), shape: BoxShape.circle, border: Border.all(color: isDarkMode.value ? anaRenk : Colors.grey, width: isDarkMode.value ? 2 : 1)),
-                child: const Icon(Icons.dark_mode, color: Colors.white, size: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  t('theme_title'),
+                  style: TextStyle(
+                    color: yaziRengi(),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-              title: Text(t('theme_dark'), style: TextStyle(color: yaziRengi(), fontWeight: isDarkMode.value ? FontWeight.bold : FontWeight.normal)),
-              trailing: isDarkMode.value ? Icon(Icons.check_circle, color: anaRenk) : null,
-              onTap: () { temaKaydet(true); Navigator.pop(ctx); },
-            ),
-            ListTile(
-              leading: Container(
-                width: 40, height: 40,
-                decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: !isDarkMode.value ? anaRenk : Colors.grey, width: !isDarkMode.value ? 2 : 1)),
-                child: const Icon(Icons.light_mode, color: Color(0xFF1A1A2E), size: 20),
+              ListTile(
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0A1017),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isDarkMode.value ? anaRenk : Colors.grey,
+                      width: isDarkMode.value ? 2 : 1,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.dark_mode,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                title: Text(
+                  t('theme_dark'),
+                  style: TextStyle(
+                    color: yaziRengi(),
+                    fontWeight: isDarkMode.value
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                ),
+                trailing: isDarkMode.value
+                    ? Icon(Icons.check_circle, color: anaRenk)
+                    : null,
+                onTap: () {
+                  temaKaydet(true);
+                  Navigator.pop(ctx);
+                },
               ),
-              title: Text(t('theme_light'), style: TextStyle(color: yaziRengi(), fontWeight: !isDarkMode.value ? FontWeight.bold : FontWeight.normal)),
-              trailing: !isDarkMode.value ? Icon(Icons.check_circle, color: anaRenk) : null,
-              onTap: () { temaKaydet(false); Navigator.pop(ctx); },
-            ),
-            const SizedBox(height: 20),
-          ]),
+              ListTile(
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: !isDarkMode.value ? anaRenk : Colors.grey,
+                      width: !isDarkMode.value ? 2 : 1,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.light_mode,
+                    color: Color(0xFF1A1A2E),
+                    size: 20,
+                  ),
+                ),
+                title: Text(
+                  t('theme_light'),
+                  style: TextStyle(
+                    color: yaziRengi(),
+                    fontWeight: !isDarkMode.value
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                ),
+                trailing: !isDarkMode.value
+                    ? Icon(Icons.check_circle, color: anaRenk)
+                    : null,
+                onTap: () {
+                  temaKaydet(false);
+                  Navigator.pop(ctx);
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
         );
       },
     );
   }
 
   void _hesapSilDialoguGoster() {
-    showDialog(context: context, builder: (ctx) => AlertDialog(
-      backgroundColor: yuzeyRengi(),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(t('delete_account_title'), style: TextStyle(color: yaziRengi(), fontWeight: FontWeight.bold)),
-      content: Text(t('delete_account_confirm'), style: TextStyle(color: ikinciYaziRengi())),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: Text(t('cancel'), style: const TextStyle(color: Colors.grey))),
-        ElevatedButton(
-          onPressed: () async {
-            Navigator.pop(ctx);
-            try {
-              await ApiServisi().hesapSil();
-              await AuthServisi().logout();
-              if (mounted) yumusakGecisYap(context, const GirisSayfasi(), eskiSayfayiKapat: true);
-            } catch (e) {
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
-            }
-          },
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          child: Text(t('delete_account_btn'), style: const TextStyle(color: Colors.white)),
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: yuzeyRengi(),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          t('delete_account_title'),
+          style: TextStyle(color: yaziRengi(), fontWeight: FontWeight.bold),
         ),
-      ],
-    ));
+        content: Text(
+          t('delete_account_confirm'),
+          style: TextStyle(color: ikinciYaziRengi()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              t('cancel'),
+              style: const TextStyle(color: Colors.grey),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await ApiServisi().hesapSil();
+                await AuthServisi().logout();
+                if (mounted)
+                  yumusakGecisYap(
+                    context,
+                    const GirisSayfasi(),
+                    eskiSayfayiKapat: true,
+                  );
+              } catch (e) {
+                if (mounted)
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString()),
+                      backgroundColor: Colors.redAccent,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text(
+              t('delete_account_btn'),
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -234,76 +364,240 @@ Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
             Container(
               margin: const EdgeInsets.all(24),
               padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(24), border: Border.all(color: kartBorderRengi())),
-              child: Column(children: [
-                // Avatar
-                Stack(children: [
-                  Container(
-                    width: 80, height: 80,
-                    decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: anaRenk.withOpacity(0.5), width: 3), image: profilUrl != null ? DecorationImage(image: NetworkImage(profilUrl), fit: BoxFit.cover) : null, color: profilUrl == null ? arkaplanRengi() : null),
-                    child: profilUrl == null ? const Icon(Icons.person, color: Colors.grey, size: 40) : null,
+              decoration: BoxDecoration(
+                color: yuzeyRengi(),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: kartBorderRengi()),
+              ),
+              child: Column(
+                children: [
+                  // Avatar
+                  Stack(
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: anaRenk.withOpacity(0.5),
+                            width: 3,
+                          ),
+                          image: profilUrl != null
+                              ? DecorationImage(
+                                  image: NetworkImage(profilUrl),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                          color: profilUrl == null ? arkaplanRengi() : null,
+                        ),
+                        child: profilUrl == null
+                            ? const Icon(
+                                Icons.person,
+                                color: Colors.grey,
+                                size: 40,
+                              )
+                            : null,
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: InkWell(
+                          onTap: () {
+                            ortakYakindaToastGoster(context);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: anaRenk,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: yuzeyRengi(), width: 2),
+                            ),
+                            child: const Icon(
+                              Icons.edit,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  Positioned(bottom: 0, right: 0, child: InkWell(
-                    onTap: () { ortakYakindaToastGoster(context); },
-                    child: Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: anaRenk, shape: BoxShape.circle, border: Border.all(color: yuzeyRengi(), width: 2)), child: const Icon(Icons.edit, color: Colors.white, size: 14)),
-                  )),
-                ]),
-                const SizedBox(height: 16),
-                Text(k?.fullName ?? '...', style: TextStyle(color: yaziRengi(), fontSize: 22, fontWeight: FontWeight.bold)),
-                Text(k?.email ?? '', style: TextStyle(color: ikinciYaziRengi(), fontSize: 12)),
-                const SizedBox(height: 20),
-                // Kredi bilgisi
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: arkaplanRengi(), borderRadius: BorderRadius.circular(16)),
-                  child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(t('active_balance'), style: TextStyle(color: ikinciYaziRengi(), fontSize: 12)),
-                      const SizedBox(height: 4),
-                      Row(children: [const Icon(Icons.diamond, color: Colors.amber, size: 24), const SizedBox(width: 8), Text('${widget.kredi}', style: premiumNumberStyle.copyWith(color: yaziRengi(), fontSize: 28))]),
-                    ]),
-                    ElevatedButton(
-                      onPressed: widget.onTopUpTap,
-                      style: ElevatedButton.styleFrom(backgroundColor: anaRenk, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                      child: Text(t('top_up'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  Text(
+                    k?.fullName ?? '...',
+                    style: TextStyle(
+                      color: yaziRengi(),
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ]),
-                ),
-                const SizedBox(height: 12),
-                // İstatistikler
-                Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-                  _profilIstatistik(Icons.view_in_ar, '${k?.renderImage ?? 0}', t('total_renders')),
-                  Container(width: 1, height: 30, color: kartBorderRengi()),
-                  _profilIstatistik(Icons.image, '${k?.createImage ?? 0}', t('created')),
-                ]),
-              ]),
+                  ),
+                  Text(
+                    k?.email ?? '',
+                    style: TextStyle(color: ikinciYaziRengi(), fontSize: 12),
+                  ),
+                  const SizedBox(height: 20),
+                  // Kredi bilgisi
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: arkaplanRengi(),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              t('active_balance'),
+                              style: TextStyle(
+                                color: ikinciYaziRengi(),
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.diamond,
+                                  color: Colors.amber,
+                                  size: 24,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${widget.kredi}',
+                                  style: premiumNumberStyle.copyWith(
+                                    color: yaziRengi(),
+                                    fontSize: 28,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        ElevatedButton(
+                          onPressed: widget.onTopUpTap,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: anaRenk,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            t('top_up'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // İstatistikler
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _profilIstatistik(
+                        Icons.view_in_ar,
+                        '${k?.renderImage ?? 0}',
+                        t('total_renders'),
+                      ),
+                      Container(width: 1, height: 30, color: kartBorderRengi()),
+                      _profilIstatistik(
+                        Icons.image,
+                        '${k?.createImage ?? 0}',
+                        t('created'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
             // Ayarlar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(t('settings'), style: TextStyle(color: yaziRengi(), fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                _ayarButonu(t('lang_select'), Icons.language, () => widget.onLangTap?.call()),
-                _ayarButonu(t('theme_select'), Icons.palette, _temaSecDialoguGoster),
-                _ayarButonu(t('edit_user'), Icons.person, () => ortakYakindaToastGoster(context)),
-                _ayarButonu(t('history'), Icons.history, () => ortakYakindaToastGoster(context)),
-                const SizedBox(height: 24),
-                // Yasal bilgiler
-                Text(t('legal_title'), style: TextStyle(color: yaziRengi(), fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                _ayarButonu(t('kvkk'), Icons.shield, () => _yasalSayfaAc(t('kvkk'), _kvkkUrl)),
-                _ayarButonu(t('terms'), Icons.description, () => _yasalSayfaAc(t('terms'), _termsUrl)),
-                _ayarButonu(t('privacy'), Icons.privacy_tip, () => _yasalSayfaAc(t('privacy'), _privacyUrl)),
-                const SizedBox(height: 24),
-                // Çıkış ve hesap silme
-                _ayarButonu(t('logout'), Icons.logout, () async {
-                  await AuthServisi().logout();
-                  if (mounted) yumusakGecisYap(context, const GirisSayfasi(), eskiSayfayiKapat: true);
-                }, renk: Colors.orangeAccent),
-                _ayarButonu(t('delete_account'), Icons.delete_forever, _hesapSilDialoguGoster, renk: Colors.redAccent),
-                const SizedBox(height: 100),
-              ]),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    t('settings'),
+                    style: TextStyle(
+                      color: yaziRengi(),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _ayarButonu(
+                    t('lang_select'),
+                    Icons.language,
+                    () => widget.onLangTap?.call(),
+                  ),
+                  _ayarButonu(
+                    t('theme_select'),
+                    Icons.palette,
+                    _temaSecDialoguGoster,
+                  ),
+                  _ayarButonu(
+                    t('edit_user'),
+                    Icons.person,
+                    () => ortakYakindaToastGoster(context),
+                  ),
+                  _ayarButonu(
+                    t('history'),
+                    Icons.history,
+                    () => ortakYakindaToastGoster(context),
+                  ),
+                  const SizedBox(height: 24),
+                  // Yasal bilgiler
+                  Text(
+                    t('legal_title'),
+                    style: TextStyle(
+                      color: yaziRengi(),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _ayarButonu(
+                    t('kvkk'),
+                    Icons.shield,
+                    () => _yasalSayfaAc(t('kvkk'), _kvkkUrl),
+                  ),
+                  _ayarButonu(
+                    t('terms'),
+                    Icons.description,
+                    () => _yasalSayfaAc(t('terms'), _termsUrl),
+                  ),
+                  _ayarButonu(
+                    t('privacy'),
+                    Icons.privacy_tip,
+                    () => _yasalSayfaAc(t('privacy'), _privacyUrl),
+                  ),
+                  const SizedBox(height: 24),
+                  // Çıkış ve hesap silme
+                  _ayarButonu(t('logout'), Icons.logout, () async {
+                    await AuthServisi().logout();
+                    if (mounted)
+                      yumusakGecisYap(
+                        context,
+                        const GirisSayfasi(),
+                        eskiSayfayiKapat: true,
+                      );
+                  }, renk: Colors.orangeAccent),
+                  _ayarButonu(
+                    t('delete_account'),
+                    Icons.delete_forever,
+                    _hesapSilDialoguGoster,
+                    renk: Colors.redAccent,
+                  ),
+                  const SizedBox(height: 100),
+                ],
+              ),
             ),
           ],
         ),
@@ -312,28 +606,51 @@ Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
   }
 
   Widget _profilIstatistik(IconData ikon, String deger, String etiket) {
-    return Column(children: [
-      Icon(ikon, color: anaRenk, size: 20),
-      const SizedBox(height: 4),
-      Text(deger, style: premiumNumberStyle.copyWith(color: yaziRengi(), fontSize: 18)),
-      Text(etiket, style: TextStyle(color: ikinciYaziRengi(), fontSize: 10)),
-    ]);
+    return Column(
+      children: [
+        Icon(ikon, color: anaRenk, size: 20),
+        const SizedBox(height: 4),
+        Text(
+          deger,
+          style: premiumNumberStyle.copyWith(color: yaziRengi(), fontSize: 18),
+        ),
+        Text(etiket, style: TextStyle(color: ikinciYaziRengi(), fontSize: 10)),
+      ],
+    );
   }
 
-  Widget _ayarButonu(String etiket, IconData ikon, VoidCallback onTap, {Color? renk}) {
+  Widget _ayarButonu(
+    String etiket,
+    IconData ikon,
+    VoidCallback onTap, {
+    Color? renk,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(12), border: Border.all(color: kartBorderRengi())),
-        child: Row(children: [
-          Icon(ikon, color: renk ?? anaRenk, size: 20),
-          const SizedBox(width: 12),
-          Expanded(child: Text(etiket, style: TextStyle(color: renk ?? yaziRengi(), fontSize: 14, fontWeight: FontWeight.w500))),
-          Icon(Icons.arrow_forward_ios, color: ikinciYaziRengi(), size: 14),
-        ]),
+        decoration: BoxDecoration(
+          color: yuzeyRengi(),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: kartBorderRengi()),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                etiket,
+                style: TextStyle(
+                  color: renk ?? yaziRengi(),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, color: ikinciYaziRengi(), size: 14),
+          ],
+        ),
       ),
     );
   }

@@ -146,14 +146,12 @@ async def upload_image(
         new_task = Processed3D(
             scan_id=new_scan.scan_id,
             thumbnail_url=thumb_path,
-            status="pending"
         )
         db.add(new_task)
     else:
         new_task = Processed2D(
             scan_id=new_scan.scan_id,
             thumbnail_url=thumb_path,
-            status="pending"
         )
         db.add(new_task)
 
