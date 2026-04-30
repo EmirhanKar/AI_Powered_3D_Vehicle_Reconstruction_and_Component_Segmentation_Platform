@@ -110,7 +110,29 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
           future: _garajFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
-            if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) return Container(width: double.infinity, padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(16)), child: Text(snapshot.hasError ? "Bağlantı hatası" : "Garajın şu an boş.", style: const TextStyle(color: Colors.grey), textAlign: TextAlign.center));
+            if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(16)),
+                child: Column(
+                  children: [
+                    Text(snapshot.hasError ? "Bağlantı hatası" : t('garage_empty_full'), style: const TextStyle(color: Colors.grey), textAlign: TextAlign.center),
+                    if (!snapshot.hasError) ...[
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const ProjeTipiSecimSayfasi()));
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: anaRenk, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                        child: Text(t('create_first_car'), style: const TextStyle(color: Colors.white, fontSize: 12)),
+                      )
+                    ]
+                  ]
+                )
+              );
+            }
             final scan = snapshot.data!.first;
             final thumbUrl = ApiServisi.buildImageUrl(scan.thumbnailUrl) ?? 'https://images.unsplash.com/photo-1603386329225-868f9b1ee6c9?q=80&w=1000';
             return ArabaKartiOlusturucu.olustur(
@@ -267,7 +289,26 @@ class _TumGarajSayfasiState extends State<TumGarajSayfasi> {
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator(color: anaRenk));
                 if (snapshot.hasError) return Center(child: Text("Hata: ${snapshot.error}", style: const TextStyle(color: Colors.redAccent)));
-                if (!snapshot.hasData || snapshot.data!.isEmpty) return Center(child: Text("Garajın şu an tamamen boş.", style: TextStyle(color: yaziRengi(), fontSize: 18)));
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(t('garage_empty_full'), style: TextStyle(color: yaziRengi(), fontSize: 18), textAlign: TextAlign.center),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => const ProjeTipiSecimSayfasi()));
+                          },
+                          icon: const Icon(Icons.add_circle, color: Colors.white),
+                          label: Text(t('create_first_car'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(backgroundColor: anaRenk, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                        )
+                      ],
+                    ),
+                  );
+                }
                 return ListView.builder(
                   padding: const EdgeInsets.all(24.0),
                   itemCount: snapshot.data!.length,

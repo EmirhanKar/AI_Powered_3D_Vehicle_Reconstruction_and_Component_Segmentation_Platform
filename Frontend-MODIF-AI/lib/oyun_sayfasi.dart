@@ -31,6 +31,9 @@ class _RenderSayfasiState extends State<RenderSayfasi>
   bool _nitroAktif = false;
   bool _kilPayiGoster = false;
   bool _renderBannerGoster = false; // Render bitti banner
+  String _renderDurumMesaji = ''; // Task 7: Render durum mesajı
+  int _durumMesajIndex = 0;
+  Timer? _durumMesajTimer;
 
   double _yolCizgisiY = 0.0;
   double _trafikY = -1.0;
@@ -65,6 +68,7 @@ class _RenderSayfasiState extends State<RenderSayfasi>
           });
     _animasyonKontrolcusu.forward();
     _oyunuBaslat();
+    _renderDurumMesajlariniBaslat();
   }
 
   // Oyunu başlatan ve döngüyü kuran fonksiyon
@@ -160,8 +164,34 @@ class _RenderSayfasiState extends State<RenderSayfasi>
   @override
   void dispose() {
     _oyunZamanlayicisi?.cancel();
+    _durumMesajTimer?.cancel();
     _animasyonKontrolcusu.dispose();
     super.dispose();
+  }
+
+  // Task 7: 10 saniye arayla render durum mesajlarını göster
+  void _renderDurumMesajlariniBaslat() {
+    final mesajlar = [
+      t('render_status_1'),
+      t('render_status_2'),
+      t('render_status_3'),
+      t('render_status_4'),
+      t('render_status_5'),
+      t('render_status_6'),
+    ];
+    _renderDurumMesaji = mesajlar[0];
+    _durumMesajIndex = 0;
+
+    _durumMesajTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (!mounted || _animasyonKontrolcusu.value >= 1.0) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _durumMesajIndex = (_durumMesajIndex + 1) % mesajlar.length;
+        _renderDurumMesaji = mesajlar[_durumMesajIndex];
+      });
+    });
   }
 
   @override
@@ -267,11 +297,15 @@ class _RenderSayfasiState extends State<RenderSayfasi>
                           ),
                           if (!islemBittiMi) ...[
                             const SizedBox(height: 6),
-                            Text(
-                              t('ai_processing_desc'),
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 11,
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 500),
+                              child: Text(
+                                _renderDurumMesaji.isNotEmpty ? _renderDurumMesaji : t('ai_processing_desc'),
+                                key: ValueKey<String>(_renderDurumMesaji),
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 11,
+                                ),
                               ),
                             ),
                           ],

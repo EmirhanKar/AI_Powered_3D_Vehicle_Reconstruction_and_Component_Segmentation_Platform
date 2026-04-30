@@ -13,7 +13,9 @@ class User(Base):
     profil_image_url = Column(String, default="")
     email = Column(String, unique=True)
     password = Column(String)
+    phone_number = Column(String, default="")
     is_admin = Column(Boolean,default=False)
+    referral_used = Column(Boolean, default=False)
     
     likes = relationship("Like", back_populates="user")
     comments = relationship("Comment", back_populates="user")

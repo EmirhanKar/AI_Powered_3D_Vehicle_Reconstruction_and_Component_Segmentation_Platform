@@ -26,7 +26,8 @@ async def register_user(user_in: UserCreate, db: AsyncSession = Depends(get_sess
         name=user_in.name,
         surname=user_in.surname,
         email=user_in.email,
-        password=hashed_password
+        password=hashed_password,
+        phone_number=user_in.phone_number or ""
     )
         
     db.add(new_user)
@@ -99,6 +100,7 @@ async def get_my_profil(db : AsyncSession = Depends(get_session),current_user: U
         "surname": current_user.surname,
         "email": current_user.email,
         "profil_image_url": current_user.profil_image_url,
+        "phone_number": current_user.phone_number or "",
         "user_credi": user_stats.user_credi if user_stats else 0,
         "create_image": user_stats.create_image if user_stats else 0,
         "render_image": user_stats.render_image if user_stats else 0
@@ -173,6 +175,7 @@ async def upload_profile_photo(
         "surname": current_user.surname,
         "email": current_user.email,
         "profil_image_url": current_user.profil_image_url,
+        "phone_number": current_user.phone_number or "",
         "user_credi": user_stats.user_credi if user_stats else 0,
         "create_image": user_stats.create_image if user_stats else 0,
         "render_image": user_stats.render_image if user_stats else 0,
@@ -199,6 +202,9 @@ async def update_my_profile(
             raise HTTPException(status_code=400, detail="Bu e-posta zaten kullanımda.")
         current_user.email = user_in.email
  
+    if user_in.phone_number is not None:
+        current_user.phone_number = user_in.phone_number
+ 
     if user_in.password is not None:
         current_user.password = get_password_hash(user_in.password)
  
@@ -214,7 +220,35 @@ async def update_my_profile(
         "surname": current_user.surname,
         "email": current_user.email,
         "profil_image_url": current_user.profil_image_url,
+        "phone_number": current_user.phone_number or "",
         "user_credi": user_stats.user_credi if user_stats else 0,
         "create_image": user_stats.create_image if user_stats else 0,
         "render_image": user_stats.render_image if user_stats else 0,
     }
+
+
+@router.delete("/me", status_code=status.HTTP_200_OK)
+async def delete_my_account(
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Kullanıcı hesabını ve tüm ilişkili verileri kalıcı olarak siler."""
+    from app.database.models import UserStats, Subscription, Modification, Scans, Comment, Like
+
+    # İlişkili verileri sil
+    await db.execute(select(UserStats).where(UserStats.user_id == current_user.user_id))
+    for model_cls in [Like, Comment, Modification, Subscription, UserStats]:
+        result = await db.execute(select(model_cls).where(model_cls.user_id == current_user.user_id))
+        for row in result.scalars().all():
+            await db.delete(row)
+
+    # Kullanıcının scan'lerini sil
+    scan_result = await db.execute(select(Scans).where(Scans.user_id == current_user.user_id))
+    for scan in scan_result.scalars().all():
+        await db.delete(scan)
+
+    # Kullanıcıyı sil
+    await db.delete(current_user)
+    await db.commit()
+
+    return {"message": "Hesabınız ve tüm verileriniz kalıcı olarak silindi."}

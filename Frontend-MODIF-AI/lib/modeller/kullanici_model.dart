@@ -5,6 +5,7 @@ class Kullanici {
   final String surname;
   final String email;
   final String? profilImageUrl;
+  final String phoneNumber;
   final int userCredi;
   final int createImage;
   final int renderImage;
@@ -15,6 +16,7 @@ class Kullanici {
     required this.surname,
     required this.email,
     this.profilImageUrl,
+    this.phoneNumber = '',
     this.userCredi = 0,
     this.createImage = 0,
     this.renderImage = 0,
@@ -28,6 +30,7 @@ class Kullanici {
       email: json['email'] ?? '',
       // Backend'de artık sadece 'profil_image_url' kullanıyoruz
       profilImageUrl: json['profil_image_url'],
+      phoneNumber: json['phone_number'] ?? '',
       userCredi: json['user_credi'] ?? 0,
       createImage: json['create_image'] ?? 0,
       renderImage: json['render_image'] ?? 0,

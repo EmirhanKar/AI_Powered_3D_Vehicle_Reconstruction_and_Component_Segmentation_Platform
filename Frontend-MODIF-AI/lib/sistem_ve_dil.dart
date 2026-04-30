@@ -27,7 +27,7 @@ Color kartBorderRengi() => isDarkMode.value ? Colors.white.withOpacity(0.05) : C
 
 final Map<String, Map<String, String>> translations = {
   'tr': {
-    'app_title': 'AI Auto Studio',
+    'app_title': 'MODIF AI',
     'welcome_title': '3D Modelleme Ve Modifiye Dünyasına Hoş Geldin',
     'username': 'Kullanıcı Adı',
     'password': 'Şifre',
@@ -200,9 +200,43 @@ final Map<String, Map<String, String>> translations = {
     // Render
     'view_render': 'Görüntüle',
     'render_complete_view': '✅ Render Tamamlandı! Görüntülemek için dokunun.',
+    // İletişim
+    'contact_title': 'İletişim',
+    'contact_btn': '📧 Bize Ulaşın',
+    'contact_subject': 'Konu',
+    'contact_message': 'Mesajınız',
+    'contact_attach': 'Fotoğraf Ekle (isteğe bağlı)',
+    'contact_send': 'Gönder',
+    'contact_success': 'Mesajınız gönderildi! En kısa sürede dönüş yapacağız.',
+    'contact_error': 'Lütfen konu ve mesaj alanlarını doldurun.',
+    // Kullanıcı düzenleme
+    'edit_profile_title': 'Bilgilerimi Düzenle',
+    'edit_name': 'Ad',
+    'edit_surname': 'Soyad',
+    'edit_email': 'E-posta',
+    'edit_phone': 'Telefon Numarası',
+    'save_changes': 'Değişiklikleri Kaydet',
+    'profile_updated': 'Profil başarıyla güncellendi!',
+    // Onboarding
+    'onboarding_1': 'Arabanı Saniyeler\nİçinde 3D Modelle',
+    'onboarding_2': 'Jant ve Renk\nModifikasyonları Yap',
+    'onboarding_3': 'Topluluğa Katıl\nve Paylaş',
+    'onboarding_skip': 'Geç',
+    'onboarding_next': 'İleri',
+    'onboarding_start': 'Başla',
+    // Garaj boş
+    'create_first_car': 'Hemen İlk Arabanı Oluştur!',
+    'garage_empty_full': 'Garajın şu an boş. Hemen ilk arabanı oluştur!',
+    // Render durum mesajları
+    'render_status_1': 'Şasi analiz ediliyor...',
+    'render_status_2': 'Jant açıları hesaplanıyor...',
+    'render_status_3': 'Işık ve yansımalar ekleniyor...',
+    'render_status_4': 'Renk tonları ayarlanıyor...',
+    'render_status_5': 'Son rötuşlar yapılıyor...',
+    'render_status_6': 'Detaylar işleniyor...',
   },
   'en': {
-    'app_title': 'AI Auto Studio',
+    'app_title': 'MODIF AI',
     'welcome_title': 'Welcome To The World Of 3D Modeling And Tuning',
     'username': 'Username',
     'password': 'Password',
@@ -375,6 +409,40 @@ final Map<String, Map<String, String>> translations = {
     // Render
     'view_render': 'View',
     'render_complete_view': '✅ Render Complete! Tap to view.',
+    // Contact
+    'contact_title': 'Contact',
+    'contact_btn': '📧 Contact Us',
+    'contact_subject': 'Subject',
+    'contact_message': 'Your Message',
+    'contact_attach': 'Attach Photo (optional)',
+    'contact_send': 'Send',
+    'contact_success': 'Your message has been sent! We will get back to you shortly.',
+    'contact_error': 'Please fill in subject and message fields.',
+    // User Edit
+    'edit_profile_title': 'Edit My Info',
+    'edit_name': 'First Name',
+    'edit_surname': 'Last Name',
+    'edit_email': 'Email',
+    'edit_phone': 'Phone Number',
+    'save_changes': 'Save Changes',
+    'profile_updated': 'Profile updated successfully!',
+    // Onboarding
+    'onboarding_1': 'Model Your Car\nIn 3D In Seconds',
+    'onboarding_2': 'Customize Wheels\nAnd Colors',
+    'onboarding_3': 'Join The Community\nAnd Share',
+    'onboarding_skip': 'Skip',
+    'onboarding_next': 'Next',
+    'onboarding_start': 'Get Started',
+    // Empty Garage
+    'create_first_car': 'Create Your First Car Now!',
+    'garage_empty_full': 'Your garage is empty. Create your first car now!',
+    // Render status messages
+    'render_status_1': 'Analyzing chassis...',
+    'render_status_2': 'Calculating wheel angles...',
+    'render_status_3': 'Adding lights and reflections...',
+    'render_status_4': 'Adjusting color tones...',
+    'render_status_5': 'Final touches...',
+    'render_status_6': 'Processing details...',
   }
 };
 

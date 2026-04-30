@@ -70,6 +70,7 @@ class _GirisSayfasiState extends State<GirisSayfasi> {
   final TextEditingController kullaniciAdiGirdisi = TextEditingController();
   final TextEditingController sifreGirdisi = TextEditingController();
   bool _isYukleniyor = false;
+  bool _showTutorial = true;
 
   Future<void> _girisYap(BuildContext context) async {
     HapticFeedback.mediumImpact();
@@ -114,7 +115,30 @@ class _GirisSayfasiState extends State<GirisSayfasi> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Icon(Icons.auto_awesome_mosaic, size: 64, color: Colors.white),
+                        Center(
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                width: 90,
+                                height: 90,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    colors: [anaRenk.withOpacity(0.6), anaRenk.withOpacity(0.1)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(color: anaRenk.withOpacity(0.4), blurRadius: 24, spreadRadius: 4),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.directions_car_filled, size: 48, color: Colors.white),
+                              const Positioned(right: 16, top: 16, child: Icon(Icons.auto_awesome, size: 24, color: Colors.amber)),
+                            ],
+                          ),
+                        ),
                         const SizedBox(height: 16),
                         Text(t('app_title'), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
                         const SizedBox(height: 8),
@@ -140,6 +164,30 @@ class _GirisSayfasiState extends State<GirisSayfasi> {
                   ),
                 ),
               ),
+              if (_showTutorial)
+                Positioned.fill(
+                  child: Container(
+                    color: koyuArkaplan.withOpacity(0.95),
+                    child: SafeArea(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.auto_fix_high, size: 80, color: anaRenk),
+                          const SizedBox(height: 32),
+                          Text(t('onboarding_1'), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold, height: 1.2)),
+                          const SizedBox(height: 16),
+                          Text(t('onboarding_2'), textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 16)),
+                          const SizedBox(height: 64),
+                          ElevatedButton(
+                            onPressed: () => setState(() => _showTutorial = false),
+                            style: ElevatedButton.styleFrom(backgroundColor: anaRenk, padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                            child: Text(t('onboarding_start'), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                          )
+                        ]
+                      )
+                    )
+                  )
+                ),
             ],
           ),
         );

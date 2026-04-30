@@ -101,14 +101,28 @@ async def create_modification(
         if not color:
             raise HTTPException(status_code=404, detail="Renk bulunamadı.")
 
-    new_mod = Modification(
-        scan_id=mod_in.scan_id,
-        user_id=current_user.user_id,
-        jant_id=mod_in.jant_id,
-        color_id=mod_in.color_id,
-        last_step="plugin_selected"
+    result = await db.execute(
+        select(Modification).where(
+            Modification.scan_id == mod_in.scan_id,
+            Modification.user_id == current_user.user_id
+        )
     )
-    db.add(new_mod)
+    existing_mod = result.scalar_one_or_none()
+
+    if existing_mod:
+        existing_mod.jant_id = mod_in.jant_id
+        existing_mod.color_id = mod_in.color_id
+        existing_mod.last_step = "plugin_selected"
+        new_mod = existing_mod
+    else:
+        new_mod = Modification(
+            scan_id=mod_in.scan_id,
+            user_id=current_user.user_id,
+            jant_id=mod_in.jant_id,
+            color_id=mod_in.color_id,
+            last_step="plugin_selected"
+        )
+        db.add(new_mod)
 
     # Scan'in last_step'ini de güncelle
     scan.status = "plugin_selected"

@@ -38,6 +38,7 @@ class ApiServisi {
     required String surname,
     required String email,
     required String password,
+    String phoneNumber = '',
   }) async {
     final response = await http
         .post(
@@ -48,6 +49,7 @@ class ApiServisi {
             'surname': surname,
             'email': email,
             'password': password,
+            'phone_number': phoneNumber,
           }),
         )
         .timeout(_timeout);
@@ -106,6 +108,7 @@ class ApiServisi {
     String? name,
     String? surname,
     String? email,
+    String? phoneNumber,
     String? password,
   }) async {
     final headers = await _authHeaders(contentType: 'application/json');
@@ -113,6 +116,7 @@ class ApiServisi {
     if (name != null) body['name'] = name;
     if (surname != null) body['surname'] = surname;
     if (email != null) body['email'] = email;
+    if (phoneNumber != null) body['phone_number'] = phoneNumber;
     if (password != null) body['password'] = password;
 
     final response = await http

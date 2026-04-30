@@ -205,7 +205,11 @@ async def referral_bonus(
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    """Arkadaş davet eden kullanıcıya 50 kredi ekler."""
+    """Arkadaş davet eden kullanıcıya 1 defalık 50 kredi ekler."""
+
+    # Daha önce kullanmış mı?
+    if current_user.referral_used:
+        raise HTTPException(status_code=400, detail="Davet bonusunu zaten kullandınız!")
 
     result = await db.execute(select(UserStats).where(UserStats.user_id == current_user.user_id))
     user_stats = result.scalar_one_or_none()
@@ -214,6 +218,7 @@ async def referral_bonus(
         raise HTTPException(status_code=404, detail="Kullanıcı istatistikleri bulunamadı.")
 
     user_stats.user_credi += 50
+    current_user.referral_used = True
     await db.commit()
     await db.refresh(user_stats)
 
