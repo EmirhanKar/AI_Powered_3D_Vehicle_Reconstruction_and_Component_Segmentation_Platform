@@ -218,29 +218,45 @@ async def complete_2d_model(
     image_file: UploadFile = File(...),
     db: AsyncSession = Depends(get_session)
 ):
+    
     result = await db.execute(select(Processed2D).where(Processed2D.scan_id == scan_id))
     task = result.scalar_one_or_none()
 
     if not task:
         raise HTTPException(status_code=404, detail=f"{scan_id} ID'li 2D tarama bulunamadı!")
+    
+    status_result = await db.execute(select(Scans.status).where(Scans.scan_id == scan_id))
+    current_status = status_result.scalar_one()
+    
+    if current_status == "pending":
+        upload_path = os.path.join("uploads", "images_2d", f"scan_{scan_id}")
+        os.makedirs(upload_path, exist_ok=True)
 
-    upload_path = os.path.join("uploads", "images_2d", f"scan_{scan_id}")
-    os.makedirs(upload_path, exist_ok=True)
+        extension = (image_file.filename or "result").split(".")[-1]
+        unique_filename = f"result_{uuid.uuid4()}.{extension}"
+        full_path = os.path.join(upload_path, unique_filename).replace("\\", "/")
 
-    extension = (image_file.filename or "result").split(".")[-1]
-    unique_filename = f"result_{uuid.uuid4()}.{extension}"
-    full_path = os.path.join(upload_path, unique_filename).replace("\\", "/")
+        content = await image_file.read()
+        
+        with open(full_path, "wb") as buffer:
+            buffer.write(await image_file.read())
 
-    content = await image_file.read()
-    with open(full_path, "wb") as f:
-        f.write(content)
-
-    task.image_url = full_path
-    task.thumbnail_url = full_path
-    await db.execute(update(Scans).where(Scans.scan_id == scan_id).values(status="completed"))
-    await db.commit()
-
-    return {"status": "success", "message": "2D görsel yüklendi!", "image_url": full_path}
+        task.image_url = full_path
+        task.thumbnail_url = full_path
+        await db.execute(
+        update(Processed2D)
+        .where(Processed2D.scan_id == scan_id)
+        .values(image_url=full_path, thumbnail_url=full_path)
+        )
+        await db.execute(
+        update(Scans)
+        .where(Scans.scan_id == scan_id)
+        .values(status="completed")
+        )
+        await db.commit()
+        
+        return {"status": "success", "message": "2D görsel yüklendi!", "image_url": full_path}
+    
 
 
 @router.get("/garage", response_model=List[ScanResponse])
@@ -264,6 +280,8 @@ async def get_scan_details(
     return scan
 
 
+#bu endpoint hem 2D hem de 3D taramalar için detayları getirir,
+# sadece scan_id'ye göre sorgular. Kullanıcı doğrulaması yapılır ve tarama sahibi değilse erişim engellenir.
 @router.get("/{scan_id}", response_model=ScanResponse)
 async def get_scan_detail(
     scan_id: int,
@@ -284,6 +302,9 @@ async def get_scan_detail(
 
     return scan
 
+#bu endpoint, tarama silme işlemi için kullanılır. 
+# Sadece tarama sahibi tarafından erişilebilir ve silinecek tarama bulunamazsa veya kullanıcı yetkisi yoksa hata döner. 
+# Tarama başarıyla silindiğinde, silinen taramanın ID'si ile birlikte bir mesaj döner.
 
 @router.delete("/{scan_id}")
 async def delete_scan(
