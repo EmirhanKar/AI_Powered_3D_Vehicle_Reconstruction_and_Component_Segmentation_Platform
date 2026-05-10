@@ -140,7 +140,7 @@ async def upload_image(
         # Son çare: ilk fotoğrafın yolunu thumbnail olarak kullan
         thumb_path = saved_paths[0]
         
-        # ── PROCESSED KAYDINI OLUŞTUR (EKSİK OLAN KISIM BURASI) ──
+    # ── PROCESSED KAYDINI OLUŞTUR ──
     
     if method == "3d":
         new_task = Processed3D(
@@ -218,45 +218,63 @@ async def complete_2d_model(
     image_file: UploadFile = File(...),
     db: AsyncSession = Depends(get_session)
 ):
-    
     result = await db.execute(select(Processed2D).where(Processed2D.scan_id == scan_id))
     task = result.scalar_one_or_none()
 
     if not task:
         raise HTTPException(status_code=404, detail=f"{scan_id} ID'li 2D tarama bulunamadı!")
-    
-    status_result = await db.execute(select(Scans.status).where(Scans.scan_id == scan_id))
-    current_status = status_result.scalar_one()
-    
-    if current_status == "pending":
-        upload_path = os.path.join("uploads", "images_2d", f"scan_{scan_id}")
-        os.makedirs(upload_path, exist_ok=True)
 
-        extension = (image_file.filename or "result").split(".")[-1]
-        unique_filename = f"result_{uuid.uuid4()}.{extension}"
-        full_path = os.path.join(upload_path, unique_filename).replace("\\", "/")
+    # Scan bilgilerini al (user_id için gerekli)
+    scan_result = await db.execute(select(Scans).where(Scans.scan_id == scan_id))
+    scan = scan_result.scalar_one_or_none()
+    if not scan:
+        raise HTTPException(status_code=404, detail=f"{scan_id} ID'li tarama bulunamadı!")
 
-        content = await image_file.read()
-        
-        with open(full_path, "wb") as buffer:
-            buffer.write(await image_file.read())
+    if scan.status != "pending":
+        return {"status": "skipped", "message": "Bu tarama zaten tamamlanmış."}
 
-        task.image_url = full_path
-        task.thumbnail_url = full_path
-        await db.execute(
+    # Sonuç görselini kaydet
+    upload_path = os.path.join("uploads", "images_2d", f"scan_{scan_id}")
+    os.makedirs(upload_path, exist_ok=True)
+
+    extension = (image_file.filename or "result").split(".")[-1]
+    unique_filename = f"result_{uuid.uuid4()}.{extension}"
+    full_path = os.path.join(upload_path, unique_filename).replace("\\", "/")
+
+    content = await image_file.read()
+
+    with open(full_path, "wb") as buffer:
+        buffer.write(content)
+
+    # Thumbnail oluştur
+    thumb_dir = os.path.join("uploads", "thumbnails", str(scan.user_id))
+    os.makedirs(thumb_dir, exist_ok=True)
+    thumb_path = os.path.join(thumb_dir, f"thumb_{scan_id}.jpg").replace("\\", "/")
+
+    try:
+        import io
+        img = Image.open(io.BytesIO(content))
+        img = img.convert("RGB")
+        img.thumbnail((400, 400))
+        img.save(thumb_path, "JPEG", quality=85)
+    except Exception:
+        import shutil
+        shutil.copy2(full_path, thumb_path)
+
+    # DB güncelle
+    await db.execute(
         update(Processed2D)
         .where(Processed2D.scan_id == scan_id)
-        .values(image_url=full_path, thumbnail_url=full_path)
-        )
-        await db.execute(
+        .values(image_url=full_path, thumbnail_url=thumb_path)
+    )
+    await db.execute(
         update(Scans)
         .where(Scans.scan_id == scan_id)
         .values(status="completed")
-        )
-        await db.commit()
-        
-        return {"status": "success", "message": "2D görsel yüklendi!", "image_url": full_path}
-    
+    )
+    await db.commit()
+
+    return {"status": "success", "message": "2D görsel yüklendi!", "image_url": full_path}
 
 
 @router.get("/garage", response_model=List[ScanResponse])

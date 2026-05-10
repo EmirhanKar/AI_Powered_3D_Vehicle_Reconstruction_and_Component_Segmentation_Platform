@@ -329,6 +329,20 @@ class ApiServisi {
     }
   }
 
+  Future<Map<String, dynamic>> yorumBegeniToggle(int commentId) async {
+    final headers = await _authHeaders();
+    final response = await http
+        .post(Uri.parse('$baseUrl/community/comments/$commentId/like'), headers: headers)
+        .timeout(_timeout);
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Yorum beğeni hatası: ${response.statusCode}');
+    }
+  }
+
+
   // ═══════════════════════════════════════════════════
   //  MAĞAZA (STORE)
   // ═══════════════════════════════════════════════════

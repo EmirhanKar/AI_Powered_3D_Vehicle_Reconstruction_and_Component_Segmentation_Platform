@@ -16,6 +16,7 @@ class SekmeProfil extends StatefulWidget {
   final VoidCallback? onTopUpTap;
   final VoidCallback? onLangTap;
   final VoidCallback? onProfileUpdated;
+  final bool isGuest;
   const SekmeProfil({
     super.key,
     this.kullanici,
@@ -23,6 +24,7 @@ class SekmeProfil extends StatefulWidget {
     this.onTopUpTap,
     this.onLangTap,
     this.onProfileUpdated,
+    this.isGuest = false,
   });
   @override
   State<SekmeProfil> createState() => _SekmeProfilState();
@@ -389,7 +391,8 @@ Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
         child: Column(
           children: [
             // Profil kartı
-            Container(
+            if (!widget.isGuest)
+              Container(
               margin: const EdgeInsets.all(24),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(24), border: Border.all(color: kartBorderRengi())),
@@ -401,14 +404,62 @@ Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
                       width: 80, height: 80,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: anaRenk.withOpacity(0.5), width: 3),
+                        border: Border.all(color: anaRenk.withValues(alpha: 0.5), width: 3),
                         image: profilUrl != null ? DecorationImage(image: NetworkImage(profilUrl), fit: BoxFit.cover) : null,
                         color: profilUrl == null ? arkaplanRengi() : null,
                       ),
                       child: profilUrl == null ? const Icon(Icons.person, color: Colors.grey, size: 40) : null,
                     ),
                     Positioned(bottom: 0, right: 0, child: InkWell(
-                      onTap: () { ortakYakindaToastGoster(context); },
+                      onTap: () {
+                        // BUG-14 FIX: Profil fotoğrafı düzenleme aktif
+                        HapticFeedback.lightImpact();
+                        showModalBottomSheet(
+                          context: context,
+                          backgroundColor: yuzeyRengi(),
+                          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                          builder: (ctx) {
+                            return SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                              Padding(padding: const EdgeInsets.all(16), child: Text(t('edit_profile_photo'), style: TextStyle(color: yaziRengi(), fontSize: 18, fontWeight: FontWeight.bold))),
+                              ListTile(
+                                leading: Icon(Icons.camera_alt, color: anaRenk),
+                                title: Text(t('take_photo'), style: TextStyle(color: yaziRengi())),
+                                onTap: () async {
+                                  Navigator.pop(ctx);
+                                  final photo = await ImagePicker().pickImage(source: ImageSource.camera, maxWidth: 800, imageQuality: 85);
+                                  if (photo != null) {
+                                    try {
+                                      await ApiServisi().profilFotoYukle(photo);
+                                      widget.onProfileUpdated?.call();
+                                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('profile_updated')), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+                                    } catch (e) {
+                                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
+                                    }
+                                  }
+                                },
+                              ),
+                              ListTile(
+                                leading: Icon(Icons.photo_library, color: anaRenk),
+                                title: Text(t('choose_gallery'), style: TextStyle(color: yaziRengi())),
+                                onTap: () async {
+                                  Navigator.pop(ctx);
+                                  final photo = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 800, imageQuality: 85);
+                                  if (photo != null) {
+                                    try {
+                                      await ApiServisi().profilFotoYukle(photo);
+                                      widget.onProfileUpdated?.call();
+                                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('profile_updated')), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+                                    } catch (e) {
+                                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
+                                    }
+                                  }
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                            ]));
+                          },
+                        );
+                      },
                       child: Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: anaRenk, shape: BoxShape.circle, border: Border.all(color: yuzeyRengi(), width: 2)), child: const Icon(Icons.edit, color: Colors.white, size: 14)),
                     )),
                   ]),
@@ -447,7 +498,31 @@ Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
             // Ayarlar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              child: widget.isGuest ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 24),
+                  // Yasal bilgiler
+                  Text(t('legal_title'), style: TextStyle(color: yaziRengi(), fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  _ayarButonu(t('kvkk'), Icons.shield, () => _yasalSayfaAc(t('kvkk'), _kvkkUrl)),
+                  _ayarButonu(t('terms'), Icons.description, () => _yasalSayfaAc(t('terms'), _termsUrl)),
+                  _ayarButonu(t('privacy'), Icons.privacy_tip, () => _yasalSayfaAc(t('privacy'), _privacyUrl)),
+                  const SizedBox(height: 24),
+                  // İletişim bölümü
+                  Text(t('contact_title'), style: TextStyle(color: yaziRengi(), fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  _ayarButonu(t('contact_btn'), Icons.support_agent, _iletisimSayfasiAc),
+                  const SizedBox(height: 48),
+                  ElevatedButton.icon(
+                    onPressed: () { yumusakGecisYap(context, const GirisSayfasi()); },
+                    icon: const Icon(Icons.login, color: Colors.white),
+                    label: const Text('Giriş Yap / Kayıt Ol', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                  ),
+                  const SizedBox(height: 100),
+                ],
+              ) : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(t('settings'), style: TextStyle(color: yaziRengi(), fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 _ayarButonu(t('lang_select'), Icons.language, () => widget.onLangTap?.call()),

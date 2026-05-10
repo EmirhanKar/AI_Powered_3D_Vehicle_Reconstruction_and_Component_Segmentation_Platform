@@ -5,12 +5,14 @@ class JantModel {
   final String modelName;
   final String category;
   final String? imageUrl;
+  final String? lokalAsset; // Lokal asset yolu (backend boşken fallback)
 
   JantModel({
     required this.jantId,
     required this.modelName,
     required this.category,
     this.imageUrl,
+    this.lokalAsset,
   });
 
   factory JantModel.fromJson(Map<String, dynamic> json) {
@@ -21,6 +23,9 @@ class JantModel {
       imageUrl: json['image_url'],
     );
   }
+
+  /// Lokal asset mi yoksa network image mı kullanılacak?
+  bool get isLokal => lokalAsset != null && (imageUrl == null || imageUrl!.isEmpty);
 }
 
 class RenkModel {

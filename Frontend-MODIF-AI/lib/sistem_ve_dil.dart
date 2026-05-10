@@ -23,7 +23,7 @@ Color arkaplanRengi() => isDarkMode.value ? const Color(0xFF0A1017) : const Colo
 Color yuzeyRengi() => isDarkMode.value ? const Color(0xFF182434) : Colors.white;
 Color yaziRengi() => isDarkMode.value ? Colors.white : const Color(0xFF1A1A2E);
 Color ikinciYaziRengi() => isDarkMode.value ? Colors.grey : Colors.grey.shade600;
-Color kartBorderRengi() => isDarkMode.value ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.15);
+Color kartBorderRengi() => isDarkMode.value ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.15);
 
 final Map<String, Map<String, String>> translations = {
   'tr': {
@@ -234,6 +234,15 @@ final Map<String, Map<String, String>> translations = {
     'render_status_4': 'Renk tonları ayarlanıyor...',
     'render_status_5': 'Son rötuşlar yapılıyor...',
     'render_status_6': 'Detaylar işleniyor...',
+    // Onboarding Welcome Flow
+    'ob_welcome_title': 'Modif AI\'ye Hoş Geldin!',
+    'ob_welcome_desc': 'Yapay zeka ile arabanı modifiye et, 3D modelle ve topluluğa katıl.',
+    'ob_feature_title': 'Arabanı Çek, Modifiye Et!',
+    'ob_feature_desc': 'Arabanı çek, 3D ile modifiyeli arabanı test et ya da 2D ile modifiye edip paylaş!',
+    'ob_signup_title': 'Modifiye İçin Hazır Mısın?',
+    'ob_signup_desc': 'Hemen kaydol veya giriş yap ve hayalindeki arabayı oluştur!',
+    'ob_signup_btn': 'Kaydol / Giriş Yap',
+    'ob_guest_btn': 'Misafir Olarak Devam Et',
   },
   'en': {
     'app_title': 'MODIF AI',
@@ -443,6 +452,15 @@ final Map<String, Map<String, String>> translations = {
     'render_status_4': 'Adjusting color tones...',
     'render_status_5': 'Final touches...',
     'render_status_6': 'Processing details...',
+    // Onboarding Welcome Flow
+    'ob_welcome_title': 'Welcome to Modif AI!',
+    'ob_welcome_desc': 'Modify your car with AI, create 3D models, and join the community.',
+    'ob_feature_title': 'Snap Your Car, Modify It!',
+    'ob_feature_desc': 'Take a photo, test your modded car in 3D, or modify in 2D and share!',
+    'ob_signup_title': 'Ready to Modify?',
+    'ob_signup_desc': 'Sign up or log in now and create your dream car!',
+    'ob_signup_btn': 'Sign Up / Log In',
+    'ob_guest_btn': 'Continue as Guest',
   }
 };
 

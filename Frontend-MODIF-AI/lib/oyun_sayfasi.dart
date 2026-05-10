@@ -30,7 +30,7 @@ class _RenderSayfasiState extends State<RenderSayfasi>
 
   bool _nitroAktif = false;
   bool _kilPayiGoster = false;
-  bool _renderBannerGoster = false; // Render bitti banner
+
   String _renderDurumMesaji = ''; // Task 7: Render durum mesajı
   int _durumMesajIndex = 0;
   Timer? _durumMesajTimer;
@@ -58,7 +58,7 @@ class _RenderSayfasiState extends State<RenderSayfasi>
           ..addStatusListener((status) {
             if (status == AnimationStatus.completed) {
               // Madde 9: Oyun devam ediyor, sadece banner gösteriliyor
-              setState(() => _renderBannerGoster = true);
+              // Render tamamlandı — bildirim oluştur
               // Bildirim oluştur
               BildirimServisi.renderBildirimiOlustur(
                 arabaAdi: widget.carName,
@@ -73,6 +73,8 @@ class _RenderSayfasiState extends State<RenderSayfasi>
 
   // Oyunu başlatan ve döngüyü kuran fonksiyon
   void _oyunuBaslat() {
+    // BUG-24 FIX: Önceki timer'ı iptal et (çift game loop önlemi)
+    _oyunZamanlayicisi?.cancel();
     _oyunAktif = true;
     _oyunBitti = false;
     _oyunSkoru = 0;
@@ -240,13 +242,13 @@ class _RenderSayfasiState extends State<RenderSayfasi>
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: islemBittiMi
-                              ? Colors.green.withOpacity(0.5)
-                              : Colors.white.withOpacity(0.05),
+                              ? Colors.green.withValues(alpha: 0.5)
+                              : Colors.white.withValues(alpha: 0.05),
                         ),
                         boxShadow: islemBittiMi
                             ? [
                                 BoxShadow(
-                                  color: Colors.green.withOpacity(0.2),
+                                  color: Colors.green.withValues(alpha: 0.2),
                                   blurRadius: 12,
                                 ),
                               ]
@@ -362,14 +364,14 @@ class _RenderSayfasiState extends State<RenderSayfasi>
                           color: const Color(0xFF1a1c23),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.1),
+                            color: Colors.white.withValues(alpha: 0.1),
                             width: 2,
                           ),
                           boxShadow: [
                             BoxShadow(
                               color: _nitroAktif
-                                  ? Colors.orange.withOpacity(0.3)
-                                  : anaRenk.withOpacity(0.1),
+                                  ? Colors.orange.withValues(alpha: 0.3)
+                                  : anaRenk.withValues(alpha: 0.1),
                               blurRadius: 15,
                               spreadRadius: 2,
                             ),
@@ -388,7 +390,7 @@ class _RenderSayfasiState extends State<RenderSayfasi>
                                   child: Container(
                                     width: 4,
                                     height: 40,
-                                    color: Colors.white.withOpacity(0.3),
+                                    color: Colors.white.withValues(alpha: 0.3),
                                   ),
                                 ),
                               for (int i = 0; i < 5; i++)
@@ -400,7 +402,7 @@ class _RenderSayfasiState extends State<RenderSayfasi>
                                   child: Container(
                                     width: 4,
                                     height: 40,
-                                    color: Colors.white.withOpacity(0.3),
+                                    color: Colors.white.withValues(alpha: 0.3),
                                   ),
                                 ),
 
@@ -499,7 +501,7 @@ class _RenderSayfasiState extends State<RenderSayfasi>
                               // Oyun bitti overlay
                               if (_oyunBitti)
                                 Container(
-                                  color: Colors.black.withOpacity(0.85),
+                                  color: Colors.black.withValues(alpha: 0.85),
                                   child: Center(
                                     child: Column(
                                       mainAxisSize: MainAxisSize.min,
@@ -554,7 +556,7 @@ class _RenderSayfasiState extends State<RenderSayfasi>
                                         Container(
                                           padding: const EdgeInsets.all(12),
                                           decoration: BoxDecoration(
-                                            color: Colors.white.withOpacity(
+                                            color: Colors.white.withValues(alpha:
                                               0.05,
                                             ),
                                             borderRadius: BorderRadius.circular(
@@ -699,7 +701,7 @@ class _RenderSayfasiState extends State<RenderSayfasi>
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
           ),
         ),
         padding: const EdgeInsets.all(8),

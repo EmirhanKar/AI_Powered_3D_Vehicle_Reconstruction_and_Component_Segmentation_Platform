@@ -8,19 +8,22 @@ import 'servisler/api_servisi.dart';
 
 class SekmeMagaza extends StatefulWidget {
   final VoidCallback? onCreditsChanged;
-  const SekmeMagaza({super.key, this.onCreditsChanged});
+  final bool isGuest;
+  const SekmeMagaza({super.key, this.onCreditsChanged, this.isGuest = false});
   @override
   State<SekmeMagaza> createState() => _SekmeMagazaState();
 }
 
 class _SekmeMagazaState extends State<SekmeMagaza> {
-  late Future<List<Paket>> _paketFuture;
+  Future<List<Paket>>? _paketFuture;
   bool _satinAlinyor = false;
 
   @override
   void initState() {
     super.initState();
-    _paketFuture = ApiServisi().paketleriGetir();
+    if (!widget.isGuest) {
+      _paketFuture = ApiServisi().paketleriGetir();
+    }
   }
 
   Future<void> _satinAl(Paket paket) async {
@@ -109,6 +112,10 @@ class _SekmeMagazaState extends State<SekmeMagaza> {
     return InkWell(
       onTap: () async {
         Navigator.pop(ctx);
+        if (widget.isGuest) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bunun için kayıt olmanız gerekir!')));
+          return;
+        }
         HapticFeedback.mediumImpact();
         // share_plus ile paylaş
         await Share.share(metin);
@@ -127,7 +134,7 @@ class _SekmeMagazaState extends State<SekmeMagaza> {
         children: [
           Container(
             width: 52, height: 52,
-            decoration: BoxDecoration(color: renk.withOpacity(0.15), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: renk.withValues(alpha: 0.15), shape: BoxShape.circle),
             child: Icon(ikon, color: renk, size: 26),
           ),
           const SizedBox(height: 6),
@@ -159,38 +166,65 @@ class _SekmeMagazaState extends State<SekmeMagaza> {
             Text(t('store_desc'), style: TextStyle(color: ikinciYaziRengi(), fontSize: 14)),
           ])),
           Expanded(
-            child: FutureBuilder<List<Paket>>(
-              future: _paketFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator(color: anaRenk));
-                final paketler = snapshot.data ?? [];
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(t('packages'), style: TextStyle(color: yaziRengi(), fontSize: 20, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 16),
-                      ...paketler.map((paket) {
-                        if (paket.isSubscription) return _abonelikKarti(paket, koyuArkaplan, koyuYuzey);
-                        return Padding(padding: const EdgeInsets.only(bottom: 16), child: _paketKarti(paket, koyuYuzey, anaRenk));
-                      }),
-                      const SizedBox(height: 16),
-                      // Arkadaşını davet et butonu
-                      InkWell(
-                        onTap: _davetEtDialoguGoster,
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20), decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.purple.shade800, Colors.pink]), borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.pink.withOpacity(0.4), blurRadius: 10, spreadRadius: 1)]),
-                          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.group_add, color: Colors.white, size: 28), const SizedBox(width: 12), Text(t('invite_friend'), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14))]),
+            child: widget.isGuest
+                ? _buildGuestView()
+                : FutureBuilder<List<Paket>>(
+                    future: _paketFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator(color: anaRenk));
+                      final paketler = snapshot.data ?? [];
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(t('packages'), style: TextStyle(color: yaziRengi(), fontSize: 20, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 16),
+                            ...paketler.map((paket) {
+                              if (paket.isSubscription) return _abonelikKarti(paket, koyuArkaplan, koyuYuzey);
+                              return Padding(padding: const EdgeInsets.only(bottom: 16), child: _paketKarti(paket, koyuYuzey, anaRenk));
+                            }),
+                            const SizedBox(height: 16),
+                            // Arkadaşını davet et butonu
+                            InkWell(
+                              onTap: _davetEtDialoguGoster,
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20), decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.purple.shade800, Colors.pink]), borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.pink.withValues(alpha: 0.4), blurRadius: 10, spreadRadius: 1)]),
+                                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.group_add, color: Colors.white, size: 28), const SizedBox(width: 12), Text(t('invite_friend'), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14))]),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Center(child: TextButton.icon(onPressed: _sssSayfasiAc, icon: const Icon(Icons.help_outline, color: Colors.grey, size: 18), label: Text(t('faq'), style: const TextStyle(color: Colors.grey)))),
+                            const SizedBox(height: 100),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      Center(child: TextButton.icon(onPressed: _sssSayfasiAc, icon: const Icon(Icons.help_outline, color: Colors.grey, size: 18), label: Text(t('faq'), style: const TextStyle(color: Colors.grey)))),
-                      const SizedBox(height: 100),
-                    ],
+                      );
+                    },
                   ),
-                );
-              },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGuestView() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(16)),
+            child: Text('Kredi paketi alabilmek için kayıt olmanız gerekmektedir.', style: TextStyle(color: ikinciYaziRengi(), fontSize: 14), textAlign: TextAlign.center),
+          ),
+          const SizedBox(height: 32),
+          // Arkadaşını davet et butonu
+          InkWell(
+            onTap: _davetEtDialoguGoster,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20), decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.purple.shade800, Colors.pink]), borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.pink.withValues(alpha: 0.4), blurRadius: 10, spreadRadius: 1)]),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.group_add, color: Colors.white, size: 28), const SizedBox(width: 12), Text(t('invite_friend'), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14))]),
             ),
           ),
         ],
@@ -210,7 +244,7 @@ class _SekmeMagazaState extends State<SekmeMagaza> {
           child: Container(
             padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: koyuYuzey, borderRadius: BorderRadius.circular(16), border: Border.all(color: kartBorderRengi())),
             child: Row(children: [
-              Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: renk.withOpacity(0.1), shape: BoxShape.circle), child: Icon(ikon, color: renk, size: 28)),
+              Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: renk.withValues(alpha: 0.1), shape: BoxShape.circle), child: Icon(ikon, color: renk, size: 28)),
               const SizedBox(width: 16),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
@@ -224,7 +258,7 @@ class _SekmeMagazaState extends State<SekmeMagaza> {
             ]),
           ),
         ),
-        if (paket.isFeatured) Positioned(top: -10, right: 0, child: Transform.rotate(angle: 0.1, child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.deepOrange, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.deepOrange.withOpacity(0.5), blurRadius: 8)]), child: Text(t('best_deal'), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))))),
+        if (paket.isFeatured) Positioned(top: -10, right: 0, child: Transform.rotate(angle: 0.1, child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.deepOrange, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.deepOrange.withValues(alpha: 0.5), blurRadius: 8)]), child: Text(t('best_deal'), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))))),
       ],
     );
   }
@@ -236,15 +270,15 @@ class _SekmeMagazaState extends State<SekmeMagaza> {
         onTap: _satinAlinyor ? null : () => _satinAl(paket),
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA500)]), boxShadow: [BoxShadow(color: const Color(0xFFFFD700).withOpacity(0.4), blurRadius: 20, spreadRadius: 3)]),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA500)]), boxShadow: [BoxShadow(color: const Color(0xFFFFD700).withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 3)]),
           padding: const EdgeInsets.all(2),
           child: Container(
             padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: koyuArkaplan, borderRadius: BorderRadius.circular(18)),
             child: Column(children: [
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: const Color(0xFFFFD700).withOpacity(0.2), borderRadius: BorderRadius.circular(8)), child: Text(t('most_preferred'), style: const TextStyle(color: Color(0xFFFFD700), fontSize: 10, fontWeight: FontWeight.bold)))]),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: const Color(0xFFFFD700).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)), child: Text(t('most_preferred'), style: const TextStyle(color: Color(0xFFFFD700), fontSize: 10, fontWeight: FontWeight.bold)))]),
               const SizedBox(height: 16),
               Row(children: [
-                Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFFFD700).withOpacity(0.1), shape: BoxShape.circle), child: const Icon(Icons.all_inclusive, color: Color(0xFFFFD700), size: 32)),
+                Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFFFD700).withValues(alpha: 0.1), shape: BoxShape.circle), child: const Icon(Icons.all_inclusive, color: Color(0xFFFFD700), size: 32)),
                 const SizedBox(width: 16),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(paket.name, style: TextStyle(color: yaziRengi(), fontSize: 20, fontWeight: FontWeight.bold)),
@@ -308,7 +342,7 @@ class SSSSayfasi extends StatelessWidget {
               child: ExpansionTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: anaRenk.withOpacity(0.1), shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: anaRenk.withValues(alpha: 0.1), shape: BoxShape.circle),
                   child: Icon(item['icon'] as IconData, color: anaRenk, size: 22),
                 ),
                 title: Text(item['q'] as String, style: TextStyle(color: yaziRengi(), fontSize: 14, fontWeight: FontWeight.w600)),

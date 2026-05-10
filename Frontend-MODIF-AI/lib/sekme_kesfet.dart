@@ -6,42 +6,64 @@ import 'modeller/scan_model.dart';
 import 'servisler/api_servisi.dart';
 
 class SekmeKesfet extends StatefulWidget {
-  const SekmeKesfet({super.key});
+  final bool isGuest;
+  static final GlobalKey likeKey = GlobalKey();
+  static final GlobalKey commentKey = GlobalKey();
+  const SekmeKesfet({super.key, this.isGuest = false});
   @override
   State<SekmeKesfet> createState() => _SekmeKesfetState();
 }
 
 class _SekmeKesfetState extends State<SekmeKesfet> {
-  late Future<List<FeedItem>> _feedFuture;
+  Future<List<FeedItem>>? _feedFuture;
 
   @override
   void initState() {
     super.initState();
-    _feedFuture = ApiServisi().feedGetir();
+    if (!widget.isGuest) {
+      _feedFuture = ApiServisi().feedGetir();
+    }
   }
 
   void _alevTikla(FeedItem item) async {
-    // Madde 8: Tek alev kısıtı — zaten beğendiyse geri almaz
-    if (item.isLiked) {
-      HapticFeedback.heavyImpact();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bu aracı zaten beğendiniz! 🔥'), backgroundColor: Colors.deepOrange, behavior: SnackBarBehavior.floating, duration: Duration(seconds: 1)));
+    if (widget.isGuest) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bunun için giriş yapmalısınız!')));
       return;
     }
     HapticFeedback.selectionClick();
-    setState(() { item.isLiked = true; item.likeCount++; });
+    final wasLiked = item.isLiked;
+    setState(() {
+      item.isLiked = !wasLiked;
+      item.likeCount += wasLiked ? -1 : 1;
+    });
     try {
       await ApiServisi().begeniToggle(item.scanId);
     } catch (e) {
-      setState(() { item.isLiked = false; item.likeCount--; });
+      // Hata durumunda geri al
+      setState(() {
+        item.isLiked = wasLiked;
+        item.likeCount += wasLiked ? 1 : -1;
+      });
     }
   }
 
   void _yorumSayfasiAc(FeedItem item) {
+    if (widget.isGuest) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bunun için giriş yapmalısınız!')));
+      return;
+    }
     HapticFeedback.lightImpact();
-    Navigator.push(context, MaterialPageRoute(builder: (c) => GonderiDetaySayfasi(feedItem: item)));
+    Navigator.push(context, MaterialPageRoute(builder: (c) => GonderiDetaySayfasi(feedItem: item))).then((_) {
+      // Detaydan dönünce feed kartlarını güncelle (yorum/beğeni sayısı değişmiş olabilir)
+      if (mounted) setState(() {});
+    });
   }
 
   void _toplulugaPaylas() async {
+    if (widget.isGuest) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bunun için giriş yapmalısınız!')));
+      return;
+    }
     HapticFeedback.lightImpact();
     try {
       final garaj = await ApiServisi().garajiGetir();
@@ -114,41 +136,68 @@ class _SekmeKesfetState extends State<SekmeKesfet> {
           ),
           // Feed
           Expanded(
-            child: FutureBuilder<List<FeedItem>>(
-              future: _feedFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator(color: anaRenk));
-                if (snapshot.hasError) return Center(child: Text("Bağlantı hatası", style: TextStyle(color: yaziRengi())));
-                final items = snapshot.data ?? [];
-                if (items.isEmpty) return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.explore_off, color: Colors.grey, size: 48), const SizedBox(height: 12), Text('Henüz paylaşım yok', style: TextStyle(color: ikinciYaziRengi(), fontSize: 16))]));
-                return GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.68),
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    final thumbUrl = ApiServisi.buildImageUrl(item.thumbnailUrl) ?? 'https://images.unsplash.com/photo-1603386329225-868f9b1ee6c9?q=80&w=500';
-                    return GestureDetector(
-                      onTap: () => _yorumSayfasiAc(item),
-                      child: _kesfetKartiOlustur(item, thumbUrl),
-                    );
-                  },
-                );
-              },
-            ),
+            child: widget.isGuest
+                ? _buildDummyGrid()
+                : FutureBuilder<List<FeedItem>>(
+                    future: _feedFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator(color: anaRenk));
+                      if (snapshot.hasError) return Center(child: Text("Bağlantı hatası", style: TextStyle(color: yaziRengi())));
+                      final items = snapshot.data ?? [];
+                      if (items.isEmpty) return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.explore_off, color: Colors.grey, size: 48), const SizedBox(height: 12), Text('Henüz paylaşım yok', style: TextStyle(color: ikinciYaziRengi(), fontSize: 16))]));
+                      return GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.68),
+                        itemCount: items.length,
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          final thumbUrl = ApiServisi.buildImageUrl(item.thumbnailUrl);
+                          debugPrint('[Keşfet] scan=${item.scanId} thumbUrl=$thumbUrl raw=${item.thumbnailUrl}');
+                          final displayUrl = thumbUrl ?? 'https://images.unsplash.com/photo-1603386329225-868f9b1ee6c9?q=80&w=500';
+                          return GestureDetector(
+                            onTap: () => _yorumSayfasiAc(item),
+                            child: _kesfetKartiOlustur(item, displayUrl, index),
+                          );
+                        },
+                      );
+                    },
+                  ),
           ),
         ],
       ),
     );
   }
 
-  Widget _kesfetKartiOlustur(FeedItem item, String thumbUrl) {
+  Widget _buildDummyGrid() {
+    final List<FeedItem> dummyItems = [
+      FeedItem(scanId: 1, carName: 'Örnek Araç 1', ownerName: 'ModifAI', thumbnailUrl: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=500', likeCount: 124, commentCount: 12, isLiked: false),
+      FeedItem(scanId: 2, carName: 'Örnek Araç 2', ownerName: 'Misafir', thumbnailUrl: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=500', likeCount: 89, commentCount: 5, isLiked: false),
+      FeedItem(scanId: 3, carName: 'Örnek Araç 3', ownerName: 'Test', thumbnailUrl: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?q=80&w=500', likeCount: 245, commentCount: 30, isLiked: true),
+      FeedItem(scanId: 4, carName: 'Örnek Araç 4', ownerName: 'Admin', thumbnailUrl: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?q=80&w=500', likeCount: 56, commentCount: 2, isLiked: false),
+    ];
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.68),
+      itemCount: dummyItems.length,
+      itemBuilder: (context, index) {
+        final item = dummyItems[index];
+        return GestureDetector(
+          onTap: () => _yorumSayfasiAc(item),
+          child: _kesfetKartiOlustur(item, item.thumbnailUrl!, index),
+        );
+      },
+    );
+  }
+
+
+  Widget _kesfetKartiOlustur(FeedItem item, String thumbUrl, int index) {
     return Container(
       decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(16), border: Border.all(color: kartBorderRengi())),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: Image.network(thumbUrl, width: double.infinity, fit: BoxFit.cover, errorBuilder: (c, e, s) => Container(color: Colors.black26, child: const Icon(Icons.image_not_supported, color: Colors.grey))))),
+          Expanded(child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: Image.network(thumbUrl, width: double.infinity, fit: BoxFit.cover, loadingBuilder: (c, child, progress) { if (progress == null) return child; return Container(color: yuzeyRengi(), child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.deepOrange.withValues(alpha: 0.5)))); }, errorBuilder: (c, e, s) => Container(color: yuzeyRengi(), child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.broken_image_outlined, color: ikinciYaziRengi(), size: 32), const SizedBox(height: 4), Text('Görsel yüklenemedi', style: TextStyle(color: ikinciYaziRengi(), fontSize: 9))])))))),
           Padding(
             padding: const EdgeInsets.all(10.0),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -159,17 +208,21 @@ class _SekmeKesfetState extends State<SekmeKesfet> {
               Row(children: [
                 // Alev butonu
                 InkWell(
+                  key: index == 0 ? SekmeKesfet.likeKey : null,
                   onTap: () => _alevTikla(item),
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(color: item.isLiked ? Colors.deepOrange.withOpacity(0.2) : Colors.deepOrange.withOpacity(0.05), borderRadius: BorderRadius.circular(12), border: Border.all(color: item.isLiked ? Colors.deepOrangeAccent : Colors.deepOrange.withOpacity(0.5))),
+                    decoration: BoxDecoration(color: item.isLiked ? Colors.deepOrange.withValues(alpha: 0.2) : Colors.deepOrange.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(12), border: Border.all(color: item.isLiked ? Colors.deepOrangeAccent : Colors.deepOrange.withValues(alpha: 0.5))),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [Text(item.isLiked ? '🔥' : '🔥', style: const TextStyle(fontSize: 12)), const SizedBox(width: 4), Text('${item.likeCount}', style: TextStyle(color: item.isLiked ? Colors.white : Colors.deepOrange, fontWeight: FontWeight.bold, fontSize: 11))]),
                   ),
                 ),
                 const SizedBox(width: 8),
                 // Yorum sayısı
-                Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.comment_outlined, color: ikinciYaziRengi(), size: 14), const SizedBox(width: 4), Text('${item.commentCount}', style: TextStyle(color: ikinciYaziRengi(), fontSize: 11))]),
+                Container(
+                  key: index == 0 ? SekmeKesfet.commentKey : null,
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.comment_outlined, color: ikinciYaziRengi(), size: 14), const SizedBox(width: 4), Text('${item.commentCount}', style: TextStyle(color: ikinciYaziRengi(), fontSize: 11))]),
+                ),
               ]),
             ]),
           ),
@@ -198,6 +251,23 @@ class _GonderiDetaySayfasiState extends State<GonderiDetaySayfasi> {
     _yorumFuture = ApiServisi().yorumlariGetir(widget.feedItem.scanId);
   }
 
+  Future<void> _begeniTiklaDetay() async {
+    HapticFeedback.selectionClick();
+    final wasLiked = widget.feedItem.isLiked;
+    setState(() {
+      widget.feedItem.isLiked = !wasLiked;
+      widget.feedItem.likeCount += wasLiked ? -1 : 1;
+    });
+    try {
+      await ApiServisi().begeniToggle(widget.feedItem.scanId);
+    } catch (e) {
+      setState(() {
+        widget.feedItem.isLiked = wasLiked;
+        widget.feedItem.likeCount += wasLiked ? 1 : -1;
+      });
+    }
+  }
+
   Future<void> _yorumGonder() async {
     final icerik = _yorumController.text.trim();
     if (icerik.isEmpty) return;
@@ -205,11 +275,34 @@ class _GonderiDetaySayfasiState extends State<GonderiDetaySayfasi> {
     try {
       await ApiServisi().yorumEkle(widget.feedItem.scanId, icerik);
       _yorumController.clear();
-      setState(() { _yorumFuture = ApiServisi().yorumlariGetir(widget.feedItem.scanId); });
+      // Madde 4: Anlık sayı artışı
+      setState(() {
+        widget.feedItem.commentCount++;
+        _yorumFuture = ApiServisi().yorumlariGetir(widget.feedItem.scanId);
+      });
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
     } finally {
       if (mounted) setState(() => _gonderiliyor = false);
+    }
+  }
+
+  void _yorumBegeniTikla(Yorum yorum) async {
+    // Madde 2: Sadece 1 kez (zaten beğendiyse geri almaz mantığı isteğe bağlı ama "1 kullanıcı 1 tane atabilsin" denmiş)
+    if (yorum.isLiked) return;
+
+    HapticFeedback.selectionClick();
+    setState(() {
+      yorum.isLiked = true;
+      yorum.likeCount++;
+    });
+    try {
+      await ApiServisi().yorumBegeniToggle(yorum.commentId);
+    } catch (e) {
+      setState(() {
+        yorum.isLiked = false;
+        yorum.likeCount--;
+      });
     }
   }
 
@@ -220,6 +313,7 @@ class _GonderiDetaySayfasiState extends State<GonderiDetaySayfasi> {
 
     return Scaffold(
       backgroundColor: arkaplanRengi(),
+      resizeToAvoidBottomInset: true, // Klavye için önemli
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -227,109 +321,146 @@ class _GonderiDetaySayfasiState extends State<GonderiDetaySayfasi> {
         title: Text(widget.feedItem.carName, style: TextStyle(color: yaziRengi(), fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          // Araç görseli + bilgiler
-          ClipRRect(
-            borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
-            child: Image.network(thumbUrl, height: 250, width: double.infinity, fit: BoxFit.cover, errorBuilder: (c, e, s) => Container(height: 250, color: Colors.black26)),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(widget.feedItem.carName, style: TextStyle(color: yaziRengi(), fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text('${t('by')}${widget.feedItem.ownerName}', style: TextStyle(color: ikinciYaziRengi(), fontSize: 13)),
-              ]),
-              Row(children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: widget.feedItem.isLiked ? Colors.deepOrange.withOpacity(0.2) : Colors.deepOrange.withOpacity(0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.deepOrange.withOpacity(0.5))),
-                  child: Row(children: [const Text('🔥', style: TextStyle(fontSize: 16)), const SizedBox(width: 4), Text('${widget.feedItem.likeCount}', style: TextStyle(color: yaziRengi(), fontWeight: FontWeight.bold))]),
-                ),
-              ]),
-            ]),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(children: [Icon(Icons.comment, color: anaRenk, size: 18), const SizedBox(width: 8), Text(t('comments'), style: TextStyle(color: yaziRengi(), fontSize: 16, fontWeight: FontWeight.bold))]),
-          ),
-          const SizedBox(height: 8),
-          // Yorum listesi
-          Expanded(
-            child: FutureBuilder<List<Yorum>>(
-              future: _yorumFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator(color: anaRenk));
-                final yorumlar = snapshot.data ?? [];
-                if (yorumlar.isEmpty) return Center(child: Text(t('no_comments'), style: TextStyle(color: ikinciYaziRengi())));
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: yorumlar.length,
-                  itemBuilder: (context, index) {
-                    final yorum = yorumlar[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(12), border: Border.all(color: kartBorderRengi())),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                          Text('Kullanıcı #${yorum.userId}', style: TextStyle(color: anaRenk, fontWeight: FontWeight.bold, fontSize: 12)),
-                          Text(_zamanHesapla(yorum.createdAt), style: TextStyle(color: ikinciYaziRengi(), fontSize: 10)),
-                        ]),
-                        const SizedBox(height: 6),
-                        Text(yorum.content, style: TextStyle(color: yaziRengi(), fontSize: 13, height: 1.4)),
-                      ]),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          // Yorum yazma alanı
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(color: yuzeyRengi(), border: Border(top: BorderSide(color: kartBorderRengi()))),
-            child: SafeArea(
-              child: Row(children: [
-                Expanded(
-                  child: TextField(
-                    controller: _yorumController,
-                    style: TextStyle(color: yaziRengi(), fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: t('write_comment'),
-                      hintStyle: TextStyle(color: ikinciYaziRengi()),
-                      filled: true,
-                      fillColor: arkaplanRengi(),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Column(
+          children: [
+            Expanded(
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        ClipRRect(
+                          borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
+                          child: Image.network(thumbUrl, height: 250, width: double.infinity, fit: BoxFit.cover, errorBuilder: (c, e, s) => Container(height: 250, color: Colors.black26)),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(widget.feedItem.carName, style: TextStyle(color: yaziRengi(), fontSize: 20, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 4),
+                              Text('${t('by')}${widget.feedItem.ownerName}', style: TextStyle(color: ikinciYaziRengi(), fontSize: 13)),
+                            ]),
+                            InkWell(
+                              onTap: () => _begeniTiklaDetay(),
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(color: widget.feedItem.isLiked ? Colors.deepOrange.withValues(alpha: 0.2) : Colors.deepOrange.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: widget.feedItem.isLiked ? Colors.deepOrangeAccent : Colors.deepOrange.withValues(alpha: 0.5))),
+                                child: Row(children: [const Text('🔥', style: TextStyle(fontSize: 16)), const SizedBox(width: 4), Text('${widget.feedItem.likeCount}', style: TextStyle(color: widget.feedItem.isLiked ? Colors.white : yaziRengi(), fontWeight: FontWeight.bold))]),
+                              ),
+                            ),
+                          ]),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(children: [Icon(Icons.comment, color: anaRenk, size: 18), const SizedBox(width: 8), Text(t('comments'), style: TextStyle(color: yaziRengi(), fontSize: 16, fontWeight: FontWeight.bold))]),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: _gonderiliyor ? null : _yorumGonder,
-                  borderRadius: BorderRadius.circular(24),
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: anaRenk, shape: BoxShape.circle),
-                    child: _gonderiliyor ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.send, color: Colors.white, size: 20),
+                  FutureBuilder<List<Yorum>>(
+                    future: _yorumFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) return const SliverFillRemaining(child: Center(child: CircularProgressIndicator()));
+                      final yorumlar = snapshot.data ?? [];
+                      if (yorumlar.isEmpty) return SliverFillRemaining(child: Center(child: Text(t('no_comments'), style: TextStyle(color: ikinciYaziRengi()))));
+                      
+                      return SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final yorum = yorumlar[index];
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(12), border: Border.all(color: kartBorderRengi())),
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                                    // Madde 3: İsim veritabanından
+                                    Text(yorum.userName, style: TextStyle(color: anaRenk, fontWeight: FontWeight.bold, fontSize: 13)),
+                                    Text(_zamanHesapla(yorum.createdAt), style: TextStyle(color: ikinciYaziRengi(), fontSize: 10)),
+                                  ]),
+                                  const SizedBox(height: 8),
+                                  Text(yorum.content, style: TextStyle(color: yaziRengi(), fontSize: 14, height: 1.4)),
+                                  const SizedBox(height: 10),
+                                  // Madde 2: Yorum beğenisi
+                                  Row(
+                                    children: [
+                                      InkWell(
+                                        onTap: () => _yorumBegeniTikla(yorum),
+                                        child: Row(
+                                          children: [
+                                            Icon(yorum.isLiked ? Icons.favorite : Icons.favorite_border, color: yorum.isLiked ? Colors.redAccent : ikinciYaziRengi(), size: 16),
+                                            const SizedBox(width: 4),
+                                            Text('${yorum.likeCount}', style: TextStyle(color: ikinciYaziRengi(), fontSize: 12)),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ]),
+                              );
+                            },
+                            childCount: yorumlar.length,
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                ),
-              ]),
+                ],
+              ),
             ),
-          ),
-        ],
+            // Yorum yazma alanı
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(color: yuzeyRengi(), border: Border(top: BorderSide(color: kartBorderRengi()))),
+              child: SafeArea(
+                child: Row(children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _yorumController,
+                      style: TextStyle(color: yaziRengi(), fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: t('write_comment'),
+                        hintStyle: TextStyle(color: ikinciYaziRengi()),
+                        filled: true,
+                        fillColor: arkaplanRengi(),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: _gonderiliyor ? null : _yorumGonder,
+                    borderRadius: BorderRadius.circular(24),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: anaRenk, shape: BoxShape.circle),
+                      child: _gonderiliyor ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.send, color: Colors.white, size: 20),
+                    ),
+                  ),
+                ]),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
+
   String _zamanHesapla(DateTime dt) {
     final fark = DateTime.now().difference(dt);
+    if (fark.inSeconds < 60) return 'şimdi';
     if (fark.inMinutes < 60) return '${fark.inMinutes} dk';
-    if (fark.inHours < 24) return '${fark.inHours} saat';
-    if (fark.inDays < 7) return '${fark.inDays} gün';
+    if (fark.inHours < 24) return '${fark.inHours} sa';
+    if (fark.inDays < 7) return '${fark.inDays} g';
     return '${dt.day}.${dt.month}.${dt.year}';
   }
 }

@@ -15,7 +15,7 @@ class GlassHeader extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           decoration: BoxDecoration(
-            color: yuzeyRengi().withOpacity(isDarkMode.value ? 0.4 : 0.85),
+            color: yuzeyRengi().withValues(alpha: isDarkMode.value ? 0.4 : 0.85),
             border: Border(bottom: BorderSide(color: kartBorderRengi(), width: 0.5)),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
@@ -84,120 +84,7 @@ void ortakYakindaToastGoster(BuildContext context) {
   );
 }
 
-// ETKİLEŞİMLİ KEŞFET GÖNDERİSİ KARTI
-class KesfetGonderisiCard extends StatefulWidget {
-  final String resimUrl;
-  final String kullaniciAdi;
-  final String baslik;
-  final int baslangicAlev;
-  final bool isFire;
 
-  const KesfetGonderisiCard({
-    Key? key,
-    required this.resimUrl,
-    required this.kullaniciAdi,
-    required this.baslik,
-    required this.baslangicAlev,
-    this.isFire = false,
-  }) : super(key: key);
-
-  @override
-  State<KesfetGonderisiCard> createState() => _KesfetGonderisiCardState();
-}
-
-class _KesfetGonderisiCardState extends State<KesfetGonderisiCard> {
-  late int alevSayisi;
-  bool begenildi = false;
-
-  @override
-  void initState() {
-    super.initState();
-    alevSayisi = widget.baslangicAlev;
-  }
-
-  void _alevTikla() {
-    HapticFeedback.selectionClick();
-    setState(() {
-      if (begenildi) {
-        alevSayisi--;
-        begenildi = false;
-      } else {
-        alevSayisi++;
-        begenildi = true;
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final Color koyuYuzey = yuzeyRengi();
-
-    return Container(
-      decoration: BoxDecoration(
-        color: koyuYuzey,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: widget.isFire ? Colors.deepOrange : kartBorderRengi()),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              child: Image.network(
-                widget.resimUrl,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(color: Colors.black26, child: const Icon(Icons.image_not_supported, color: Colors.grey)),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(widget.baslik, style: TextStyle(color: yaziRengi(), fontSize: 14, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 2),
-                Text('${t('by')}${widget.kullaniciAdi}', style: TextStyle(color: ikinciYaziRengi(), fontSize: 10), maxLines: 1, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 8),
-
-                InkWell(
-                  onTap: _alevTikla,
-                  borderRadius: BorderRadius.circular(12),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: begenildi ? Colors.deepOrange.withOpacity(0.2) : Colors.deepOrange.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: begenildi ? Colors.deepOrangeAccent : Colors.deepOrange.withOpacity(0.5)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('🔥', style: TextStyle(fontSize: 14)),
-                        const SizedBox(width: 4),
-                        Text(
-                          alevSayisi.toString(),
-                          style: premiumNumberStyle.copyWith(
-                            color: begenildi ? Colors.white : Colors.deepOrange,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              ],
-            ),
-          )
-        ],
-      ),
-    );
-  }
-}
 
 // Madde 7: ArabaKartiOlusturucu — işlevsel düzenle/paylaş/sil/3 nokta
 class ArabaKartiOlusturucu {
@@ -220,8 +107,8 @@ class ArabaKartiOlusturucu {
         children: [
           Stack(
             children: [
-              ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: Image.network(resimUrl, height: 150, width: double.infinity, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(height: 150, width: double.infinity, color: Colors.black26, child: const Icon(Icons.directions_car, color: Colors.grey, size: 40)))),
-              Positioned(top: 10, right: 10, child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.black.withOpacity(0.7), borderRadius: BorderRadius.circular(4)), child: Row(children: [const Icon(Icons.circle, color: Colors.green, size: 8), const SizedBox(width: 4), Text(t('completed'), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))]))),
+              ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: Image.network(resimUrl, height: 150, width: double.infinity, fit: BoxFit.cover, loadingBuilder: (c, child, progress) { if (progress == null) return child; return Container(height: 150, width: double.infinity, color: koyuYuzey, child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: anaRenk.withValues(alpha: 0.5)))); }, errorBuilder: (context, error, stackTrace) => Container(height: 150, width: double.infinity, color: koyuYuzey, child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.directions_car, color: ikinciYaziRengi(), size: 40), const SizedBox(height: 4), Text('Görsel yüklenemedi', style: TextStyle(color: ikinciYaziRengi(), fontSize: 10))]))))),
+              Positioned(top: 10, right: 10, child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(4)), child: Row(children: [const Icon(Icons.circle, color: Colors.green, size: 8), const SizedBox(width: 4), Text(t('completed'), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))]))),
             ],
           ),
           Padding(
@@ -264,7 +151,7 @@ class ArabaKartiOlusturucu {
                         InkWell(
                           onTap: onPaylas,
                           borderRadius: BorderRadius.circular(8),
-                          child: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.share, color: Colors.green, size: 16)),
+                          child: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.share, color: Colors.green, size: 16)),
                         ),
                         const SizedBox(width: 8),
                         // Düzenle butonu
