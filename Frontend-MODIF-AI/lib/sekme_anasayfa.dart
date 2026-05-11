@@ -8,6 +8,7 @@ import 'modeller/kullanici_model.dart';
 import 'modeller/scan_model.dart';
 import 'modeller/draft_model.dart';
 import 'servisler/api_servisi.dart';
+import 'oyun_sayfasi.dart';
 
 class SekmeAnaSayfa extends StatefulWidget {
   final Kullanici? kullanici;
@@ -77,7 +78,7 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
               const SizedBox(height: 8),
               Text(t('ai_step'), style: const TextStyle(color: Colors.blueAccent, fontSize: 12)),
               const SizedBox(height: 16),
-              ElevatedButton.icon(onPressed: () { HapticFeedback.lightImpact(); Navigator.push(context, MaterialPageRoute(builder: (context) => ProjeTipiSecimSayfasi(isGuest: widget.isGuest))); }, icon: Icon(Icons.add_circle, color: anaRenk), label: Text(t('new_project'), style: TextStyle(color: anaRenk, fontWeight: FontWeight.bold)), style: ElevatedButton.styleFrom(backgroundColor: Colors.white, minimumSize: const Size(double.infinity, 48), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))),
+              ElevatedButton.icon(onPressed: () { if (titresimAcik.value) HapticFeedback.lightImpact(); Navigator.push(context, MaterialPageRoute(builder: (context) => ProjeTipiSecimSayfasi(isGuest: widget.isGuest))); }, icon: Icon(Icons.add_circle, color: anaRenk), label: Text(t('new_project'), style: TextStyle(color: anaRenk, fontWeight: FontWeight.bold)), style: ElevatedButton.styleFrom(backgroundColor: Colors.white, minimumSize: const Size(double.infinity, 48), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))),
             ]),
           ),
         ]),
@@ -116,7 +117,7 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
       child: Column(children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Row(children: [Container(width: 4, height: 20, color: anaRenk), const SizedBox(width: 8), Text(t('my_garage'), style: TextStyle(color: yaziRengi(), fontSize: 20, fontWeight: FontWeight.bold))]),
-          TextButton(onPressed: () { HapticFeedback.lightImpact(); Navigator.push(context, MaterialPageRoute(builder: (context) => const TumGarajSayfasi())); }, child: Row(children: [Text(t('see_all'), style: TextStyle(color: anaRenk, fontSize: 12)), Icon(Icons.arrow_forward_ios, color: anaRenk, size: 12)])),
+          TextButton(onPressed: () { if (titresimAcik.value) HapticFeedback.lightImpact(); Navigator.push(context, MaterialPageRoute(builder: (context) => const TumGarajSayfasi())); }, child: Row(children: [Text(t('see_all'), style: TextStyle(color: anaRenk, fontSize: 12)), Icon(Icons.arrow_forward_ios, color: anaRenk, size: 12)])),
         ]),
         const SizedBox(height: 8),
         if (widget.isGuest)
@@ -149,7 +150,7 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
                       const SizedBox(height: 12),
                       ElevatedButton(
                         onPressed: () {
-                          HapticFeedback.lightImpact();
+                          if (titresimAcik.value) HapticFeedback.lightImpact();
                           Navigator.push(context, MaterialPageRoute(builder: (context) => ProjeTipiSecimSayfasi(isGuest: widget.isGuest)));
                         },
                         style: ElevatedButton.styleFrom(backgroundColor: anaRenk, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
@@ -172,11 +173,11 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
               yuzeyRengi(),
               scanId: scan.scanId,
               onDuzenle: () {
-                HapticFeedback.lightImpact();
+                if (titresimAcik.value) HapticFeedback.lightImpact();
                 Navigator.push(context, MaterialPageRoute(builder: (c) => ModifiyeSecimSayfasi(scanId: scan.scanId, carName: scan.carName, method: scan.method)));
               },
               onPaylas: () async {
-                HapticFeedback.mediumImpact();
+                if (titresimAcik.value) HapticFeedback.mediumImpact();
                 final thumbUrl = ApiServisi.buildImageUrl(scan.thumbnailUrl);
                 Share.share('${scan.carName} modifiyem nasıl olmuş? ${thumbUrl != null ? "\n\n$thumbUrl" : ""}', subject: 'Modif AI');
               },
@@ -201,7 +202,7 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
                 }
               },
               onDetay: () {
-                HapticFeedback.lightImpact();
+                if (titresimAcik.value) HapticFeedback.lightImpact();
                 // Detay sayfası — scan bilgileri gösterilir
                 showModalBottomSheet(context: context, backgroundColor: yuzeyRengi(), shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))), builder: (ctx) {
                   return SafeArea(child: Padding(
@@ -312,7 +313,13 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
               } catch (_) {}
             }
           }, icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18), label: Text(t('delete_draft'), style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold))),
-          ElevatedButton(onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (context) => ModifiyeSecimSayfasi(scanId: taslak.scanId, carName: taslak.carName, method: taslak.method))); }, style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), child: Text(t('continue_btn'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12))),
+          ElevatedButton(onPressed: () {
+            if (taslak.method == '3d') {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => RenderSayfasi(carName: taslak.carName, method: taslak.method)));
+            } else {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => ModifiyeSecimSayfasi(scanId: taslak.scanId, carName: taslak.carName, method: taslak.method)));
+            }
+          }, style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), child: Text(t('continue_btn'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12))),
         ]),
       ]),
     );
@@ -360,7 +367,7 @@ class _TumGarajSayfasiState extends State<TumGarajSayfasi> {
                         const SizedBox(height: 16),
                         ElevatedButton.icon(
                           onPressed: () {
-                            HapticFeedback.lightImpact();
+                            if (titresimAcik.value) HapticFeedback.lightImpact();
                             Navigator.push(context, MaterialPageRoute(builder: (context) => const ProjeTipiSecimSayfasi()));
                           },
                           icon: const Icon(Icons.add_circle, color: Colors.white),
@@ -389,7 +396,7 @@ class _TumGarajSayfasiState extends State<TumGarajSayfasi> {
                         scanId: scan.scanId,
                         onDuzenle: () { Navigator.push(context, MaterialPageRoute(builder: (c) => ModifiyeSecimSayfasi(scanId: scan.scanId, carName: scan.carName, method: scan.method))); },
                         onPaylas: () async {
-                          HapticFeedback.mediumImpact();
+                          if (titresimAcik.value) HapticFeedback.mediumImpact();
                           final thumbUrl = ApiServisi.buildImageUrl(scan.thumbnailUrl);
                           Share.share('${scan.carName} modifiyem nasıl olmuş? ${thumbUrl != null ? "\n\n$thumbUrl" : ""}', subject: 'Modif AI');
                         },
@@ -411,7 +418,7 @@ class _TumGarajSayfasiState extends State<TumGarajSayfasi> {
                           }
                         },
                         onDetay: () {
-                          HapticFeedback.lightImpact();
+                          if (titresimAcik.value) HapticFeedback.lightImpact();
                           showModalBottomSheet(context: context, backgroundColor: yuzeyRengi(), shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))), builder: (ctx) {
                             return SafeArea(child: Padding(
                               padding: const EdgeInsets.all(24),

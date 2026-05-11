@@ -12,6 +12,15 @@ from app.core import get_password_hash, verify_password , create_access_token
 from app.api import get_current_user
 from fastapi.security import OAuth2PasswordRequestForm
 import os , uuid
+from pydantic import BaseModel
+from datetime import timedelta
+
+class GameScoreInput(BaseModel):
+    score: int
+
+class LeaderboardResponse(BaseModel):
+    username: str
+    score: int
 
 router = APIRouter(prefix="/users")
 
@@ -252,3 +261,34 @@ async def delete_my_account(
     await db.commit()
 
     return {"message": "Hesabınız ve tüm verileriniz kalıcı olarak silindi."}
+
+@router.post("/game/score")
+async def update_game_score(
+    score_in: GameScoreInput,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    now = datetime.utcnow()
+    # Check if a week has passed since last update
+    if current_user.game_score_updated_at:
+        diff = now.replace(tzinfo=None) - current_user.game_score_updated_at.replace(tzinfo=None)
+        if diff.days >= 7:
+            current_user.game_score = score_in.score
+            current_user.game_score_updated_at = now
+        else:
+            if score_in.score > current_user.game_score:
+                current_user.game_score = score_in.score
+                current_user.game_score_updated_at = now
+    else:
+        current_user.game_score = score_in.score
+        current_user.game_score_updated_at = now
+    await db.commit()
+    return {"message": "Score updated", "best_score": current_user.game_score}
+
+@router.get("/game/leaderboard", response_model=list[LeaderboardResponse])
+async def get_game_leaderboard(db: AsyncSession = Depends(get_session)):
+    one_week_ago = datetime.utcnow() - timedelta(days=7)
+    query = select(User).where(User.game_score > 0, User.game_score_updated_at >= one_week_ago).order_by(User.game_score.desc()).limit(3)
+    result = await db.execute(query)
+    users = result.scalars().all()
+    return [{"username": u.name or "Anonim", "score": u.game_score} for u in users]

@@ -27,7 +27,7 @@ class GlassHeader extends StatelessWidget {
 }
 
 void ortadanSecimDialoguGoster(BuildContext context) {
-  HapticFeedback.lightImpact();
+  if (titresimAcik.value) HapticFeedback.lightImpact();
   showDialog(
     context: context,
     builder: (BuildContext context) {
@@ -43,7 +43,7 @@ void ortadanSecimDialoguGoster(BuildContext context) {
               title: Text(t('take_photo'), style: TextStyle(color: yaziRengi())),
               onTap: () {
                 Navigator.pop(context);
-                HapticFeedback.selectionClick();
+                if (titresimAcik.value) HapticFeedback.selectionClick();
                 ortakYakindaToastGoster(context);
               },
             ),
@@ -53,7 +53,7 @@ void ortadanSecimDialoguGoster(BuildContext context) {
               title: Text(t('choose_gallery'), style: TextStyle(color: yaziRengi())),
               onTap: () {
                 Navigator.pop(context);
-                HapticFeedback.selectionClick();
+                if (titresimAcik.value) HapticFeedback.selectionClick();
                 ortakYakindaToastGoster(context);
               },
             ),
@@ -65,7 +65,7 @@ void ortadanSecimDialoguGoster(BuildContext context) {
 }
 
 void ortakYakindaToastGoster(BuildContext context) {
-  HapticFeedback.lightImpact();
+  if (titresimAcik.value) HapticFeedback.lightImpact();
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Row(
@@ -175,7 +175,7 @@ class ArabaKartiOlusturucu {
 
 // SİNEMATİK SAYFA GEÇİŞ MOTORU — Slide + Fade kombinasyonu
 void yumusakGecisYap(BuildContext context, Widget gidilecekSayfa, {bool eskiSayfayiKapat = false}) {
-  HapticFeedback.lightImpact();
+  if (titresimAcik.value) HapticFeedback.lightImpact();
 
   var gecisAyari = PageRouteBuilder(
     transitionDuration: const Duration(milliseconds: 450),

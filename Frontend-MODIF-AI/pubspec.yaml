@@ -7,6 +7,7 @@ environment:
   sdk: ^3.11.1
 
 dependencies:
+  tflite_flutter: ^0.12.1
   flutter:
     sdk: flutter
 
@@ -21,6 +22,8 @@ dependencies:
 
   # Firebase & Bildirim
   firebase_core: ^3.0.0
+
+
 
 
 dev_dependencies:

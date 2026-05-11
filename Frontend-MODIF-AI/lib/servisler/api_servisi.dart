@@ -412,7 +412,12 @@ class ApiServisi {
     if (response.statusCode == 201) {
       return json.decode(response.body);
     } else {
-      throw Exception('Modifikasyon hatası: ${response.statusCode}');
+      String errMsg = 'Modifikasyon hatası: ${response.statusCode}';
+      try {
+        final d = json.decode(response.body);
+        if (d['detail'] != null) errMsg = d['detail'];
+      } catch (_) {}
+      throw Exception(errMsg);
     }
   }
 
@@ -477,5 +482,30 @@ class ApiServisi {
     } else {
       throw Exception('Davet hatası: ${response.statusCode}');
     }
+  }
+
+  Future<List<Map<String, dynamic>>> oyunLiderlikTablosuGetir() async {
+    final headers = await _authHeaders();
+    try {
+      final response = await http
+          .get(Uri.parse('$baseUrl/users/game/leaderboard'), headers: headers)
+          .timeout(_timeout);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.cast<Map<String, dynamic>>();
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  Future<void> oyunSkoruKaydet(int skor) async {
+    final headers = await _authHeaders(contentType: 'application/json');
+    try {
+      await http.post(
+        Uri.parse('$baseUrl/users/game/score'),
+        headers: headers,
+        body: json.encode({'score': skor}),
+      ).timeout(_timeout);
+    } catch (_) {}
   }
 }

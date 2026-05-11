@@ -27,7 +27,7 @@ class _SekmeMagazaState extends State<SekmeMagaza> {
   }
 
   Future<void> _satinAl(Paket paket) async {
-    HapticFeedback.mediumImpact();
+    if (titresimAcik.value) HapticFeedback.mediumImpact();
     setState(() => _satinAlinyor = true);
     try {
       final sonuc = await ApiServisi().paketSatinAl(paket.packageId);
@@ -45,7 +45,7 @@ class _SekmeMagazaState extends State<SekmeMagaza> {
 
   // Madde 2: Arkadaşını Davet Et — Paylaşım bottom sheet
   void _davetEtDialoguGoster() {
-    HapticFeedback.lightImpact();
+    if (titresimAcik.value) HapticFeedback.lightImpact();
     final String paylasilacakLink = t('invite_share_text');
 
     showModalBottomSheet(
@@ -116,7 +116,7 @@ class _SekmeMagazaState extends State<SekmeMagaza> {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bunun için kayıt olmanız gerekir!')));
           return;
         }
-        HapticFeedback.mediumImpact();
+        if (titresimAcik.value) HapticFeedback.mediumImpact();
         // share_plus ile paylaş
         await Share.share(metin);
         // Backend'e referral bildir — 50 kredi ekle
@@ -146,7 +146,7 @@ class _SekmeMagazaState extends State<SekmeMagaza> {
 
   // Madde 3: SSS sayfasına git
   void _sssSayfasiAc() {
-    HapticFeedback.lightImpact();
+    if (titresimAcik.value) HapticFeedback.lightImpact();
     Navigator.push(context, MaterialPageRoute(builder: (c) => const SSSSayfasi()));
   }
 

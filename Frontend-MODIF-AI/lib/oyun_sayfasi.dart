@@ -5,6 +5,8 @@ import 'dart:math';
 import 'sistem_ve_dil.dart';
 import 'sayfalar_ana.dart';
 import 'sekme_bildirim.dart';
+import 'servisler/api_servisi.dart';
+import 'modeller/community_model.dart';
 
 // --- RENDER (İŞLENİYOR) VE OYUN SAYFASI ---
 class RenderSayfasi extends StatefulWidget {
@@ -19,7 +21,7 @@ class RenderSayfasi extends StatefulWidget {
 class _RenderSayfasiState extends State<RenderSayfasi>
     with SingleTickerProviderStateMixin {
   late AnimationController _animasyonKontrolcusu;
-  final int _toplamSureSaniye = 180;
+  late final int _toplamSureSaniye;
 
   int _arabaSeridi = 1;
   int _oyunSkoru = 0;
@@ -44,9 +46,15 @@ class _RenderSayfasiState extends State<RenderSayfasi>
   double _nitroY = -1.5;
   int _nitroSeridi = 0;
 
+  List<Map<String, dynamic>> _liderlikTablosu = [];
+  List<FeedItem> _efsaneler = [];
+
   @override
   void initState() {
     super.initState();
+    _toplamSureSaniye = widget.method == '2d' ? 60 : 180;
+    
+    _liderlikTablosuVeEfsaneleriGetir();
     _animasyonKontrolcusu =
         AnimationController(
             vsync: this,
@@ -69,6 +77,21 @@ class _RenderSayfasiState extends State<RenderSayfasi>
     _animasyonKontrolcusu.forward();
     _oyunuBaslat();
     _renderDurumMesajlariniBaslat();
+  }
+
+  Future<void> _liderlikTablosuVeEfsaneleriGetir() async {
+    try {
+      final tablo = await ApiServisi().oyunLiderlikTablosuGetir();
+      final feed = await ApiServisi().feedGetir();
+      feed.sort((a, b) => b.likeCount.compareTo(a.likeCount));
+      
+      if (mounted) {
+        setState(() {
+          _liderlikTablosu = tablo;
+          _efsaneler = feed.take(3).toList();
+        });
+      }
+    } catch (_) {}
   }
 
   // Oyunu başlatan ve döngüyü kuran fonksiyon
@@ -126,17 +149,20 @@ class _RenderSayfasiState extends State<RenderSayfasi>
         if (_trafikY > 0.65 &&
             _trafikY < 1.0 &&
             _arabaSeridi == _trafikSeridi) {
-          HapticFeedback.heavyImpact();
+          if (titresimAcik.value) HapticFeedback.heavyImpact();
           _oyunBitti = true;
           if (_oyunSkoru > _enIyiSkor) _enIyiSkor = _oyunSkoru;
           _oyunZamanlayicisi?.cancel();
+          ApiServisi().oyunSkoruKaydet(_oyunSkoru).then((_) {
+            _liderlikTablosuVeEfsaneleriGetir();
+          });
         }
 
         if (!_oyunBitti &&
             _nitroY > 0.65 &&
             _nitroY < 1.0 &&
             _arabaSeridi == _nitroSeridi) {
-          HapticFeedback.mediumImpact();
+          if (titresimAcik.value) HapticFeedback.mediumImpact();
           _nitroAktif = true;
           _nitroY = -2.0;
           _oyunSkoru += 30;
@@ -153,7 +179,7 @@ class _RenderSayfasiState extends State<RenderSayfasi>
 
   void _seritDegistir(bool sagaMi) {
     if (!mounted || !_oyunAktif || _oyunBitti) return;
-    HapticFeedback.lightImpact();
+    if (titresimAcik.value) HapticFeedback.lightImpact();
     setState(() {
       if (sagaMi && _arabaSeridi < 2) {
         _arabaSeridi++;
@@ -226,7 +252,7 @@ class _RenderSayfasiState extends State<RenderSayfasi>
                   child: GestureDetector(
                     onTap: islemBittiMi
                         ? () {
-                            HapticFeedback.mediumImpact();
+                            if (titresimAcik.value) HapticFeedback.mediumImpact();
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
@@ -321,24 +347,28 @@ class _RenderSayfasiState extends State<RenderSayfasi>
                             ),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          const SizedBox(height: 8),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: Text(
-                              islemBittiMi
-                                  ? t('return_garage')
-                                  : '${t('remaining')}${kalanSaniye ~/ 60}${t('min')} ${kalanSaniye % 60}${t('sec')}',
-                              style: premiumNumberStyle.copyWith(
-                                color: islemBittiMi
-                                    ? Colors.green
-                                    : Colors.grey,
-                                fontSize: 11,
-                                fontWeight: islemBittiMi
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
+                          const SizedBox(height: 12),
+                          if (islemBittiMi)
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                if (titresimAcik.value) HapticFeedback.mediumImpact();
+                                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AnaSayfa()));
+                              },
+                              icon: const Icon(Icons.garage, color: Colors.white),
+                              label: Text(t('return_garage'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                            )
+                          else
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                '${t('remaining')}${kalanSaniye ~/ 60}${t('min')} ${kalanSaniye % 60}${t('sec')}',
+                                style: premiumNumberStyle.copyWith(
+                                  color: Colors.grey,
+                                  fontSize: 11,
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -525,7 +555,7 @@ class _RenderSayfasiState extends State<RenderSayfasi>
                                         const SizedBox(height: 24),
                                         ElevatedButton.icon(
                                           onPressed: () {
-                                            HapticFeedback.mediumImpact();
+                                            if (titresimAcik.value) HapticFeedback.mediumImpact();
                                             _oyunuBaslat();
                                           },
                                           icon: const Icon(
@@ -573,27 +603,12 @@ class _RenderSayfasiState extends State<RenderSayfasi>
                                                 ),
                                               ),
                                               const SizedBox(height: 8),
-                                              Text(
-                                                '1. ${t('coming_soon')}',
-                                                style: const TextStyle(
-                                                  color: Colors.grey,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                              Text(
-                                                '2. ${t('coming_soon')}',
-                                                style: const TextStyle(
-                                                  color: Colors.grey,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                              Text(
-                                                '3. ${t('coming_soon')}',
-                                                style: const TextStyle(
-                                                  color: Colors.grey,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
+                                              if (_liderlikTablosu.isEmpty)
+                                                const Text('Henüz skor yok', style: TextStyle(color: Colors.grey, fontSize: 12))
+                                              else
+                                                ..._liderlikTablosu.asMap().entries.map((entry) {
+                                                  return Text('${entry.key + 1}. ${entry.value["username"]} - ${entry.value["score"]}', style: const TextStyle(color: Colors.grey, fontSize: 12));
+                                                }),
                                             ],
                                           ),
                                         ),
@@ -614,7 +629,7 @@ class _RenderSayfasiState extends State<RenderSayfasi>
                 // Topluluğun Efsaneleri - basınca keşfete gitsin
                 GestureDetector(
                   onTap: () {
-                    HapticFeedback.lightImpact();
+                    if (titresimAcik.value) HapticFeedback.lightImpact();
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
@@ -648,24 +663,18 @@ class _RenderSayfasiState extends State<RenderSayfasi>
                           child: ListView(
                             scrollDirection: Axis.horizontal,
                             children: [
-                              _vitrinKartiOlustur(
-                                'https://images.unsplash.com/photo-1544829099-b9a0c07fad1a?q=80&w=1000',
-                                '@Kaan_Drift',
-                                'Supra MK4',
-                              ),
-                              const SizedBox(width: 12),
-                              _vitrinKartiOlustur(
-                                'https://images.unsplash.com/photo-1503376713222-25ec13d8cbb8?q=80&w=1000',
-                                '@Ahmet3D',
-                                'Porsche 911',
-                              ),
-                              const SizedBox(width: 12),
-                              _vitrinKartiOlustur(
-                                'https://images.unsplash.com/photo-1614200179396-2bdb77ebf81b?q=80&w=1000',
-                                '@Ali_Racer',
-                                'GTR R34',
-                              ),
-                              const SizedBox(width: 20),
+                              if (_efsaneler.isNotEmpty)
+                                ..._efsaneler.map((e) {
+                                  final fotoUrl = ApiServisi.buildImageUrl(e.thumbnailUrl) ?? 'https://images.unsplash.com/photo-1617788138017-80ad40651399?q=80&w=1000';
+                                  return Row(
+                                    children: [
+                                      _vitrinKartiOlustur(fotoUrl, '@${e.ownerName}', e.carName),
+                                      const SizedBox(width: 12),
+                                    ],
+                                  );
+                                })
+                              else
+                                const Center(child: Text('Yükleniyor...', style: TextStyle(color: Colors.grey, fontSize: 12))),
                             ],
                           ),
                         ),

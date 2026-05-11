@@ -127,7 +127,7 @@ class _GirisSayfasiState extends State<GirisSayfasi> {
 
 
   Future<void> _girisYap(BuildContext context) async {
-    HapticFeedback.mediumImpact();
+    if (titresimAcik.value) HapticFeedback.mediumImpact();
     String email = kullaniciAdiGirdisi.text.trim();
     String sifre = sifreGirdisi.text.trim();
     if (email.isEmpty || sifre.isEmpty) {
@@ -213,46 +213,11 @@ class _GirisSayfasiState extends State<GirisSayfasi> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Center(
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Container(
-                                width: 90,
-                                height: 90,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      anaRenk.withValues(alpha: 0.6),
-                                      anaRenk.withValues(alpha: 0.1),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: anaRenk.withValues(alpha: 0.4),
-                                      blurRadius: 24,
-                                      spreadRadius: 4,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(
-                                Icons.directions_car_filled,
-                                size: 48,
-                                color: Colors.white,
-                              ),
-                              const Positioned(
-                                right: 16,
-                                top: 16,
-                                child: Icon(
-                                  Icons.auto_awesome,
-                                  size: 24,
-                                  color: Colors.amber,
-                                ),
-                              ),
-                            ],
+                          child: Image.asset(
+                            'assets/LOGO101.png',
+                            width: 120,
+                            height: 120,
+                            fit: BoxFit.contain,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -282,10 +247,10 @@ class _GirisSayfasiState extends State<GirisSayfasi> {
                           decoration: InputDecoration(
                             filled: true,
                             fillColor: koyuYuzey.withValues(alpha: 0.8),
-                            hintText: t('username'),
+                            hintText: 'E-posta',
                             hintStyle: const TextStyle(color: Colors.grey),
                             prefixIcon: const Icon(
-                              Icons.person,
+                              Icons.email,
                               color: Colors.grey,
                             ),
                             border: OutlineInputBorder(
@@ -571,10 +536,10 @@ class _AnaSayfaState extends State<AnaSayfa> {
   final Color anaRenk = const Color(0xFF257bf4);
 
   // Tutorial Keys
-  static final GlobalKey kesfetKey = GlobalKey();
-  static final GlobalKey magazaKey = GlobalKey();
-  static final GlobalKey profilKey = GlobalKey();
-  static final GlobalKey fabKey = GlobalKey();
+  final GlobalKey kesfetKey = GlobalKey();
+  final GlobalKey magazaKey = GlobalKey();
+  final GlobalKey profilKey = GlobalKey();
+  final GlobalKey fabKey = GlobalKey();
 
   int _tutorialStep = -1; // -1: Kapalı, 0-6: Adımlar
   bool _isTutorialAnimating = false;
@@ -598,6 +563,14 @@ class _AnaSayfaState extends State<AnaSayfa> {
 
   Future<void> _tanitimiBaslat() async {
     final prefs = await SharedPreferences.getInstance();
+    
+    // YENİ: Kullanıcı giriş yapmışsa (misafir değilse) tanıtım gösterme.
+    // Tanıtım sadece misafir (guest) akışı için tasarlandı.
+    if (await AuthServisi().isLoggedIn()) {
+      await prefs.setBool('first_time_tutorial', false);
+      return;
+    }
+
     final firstTime = prefs.getBool('first_time_tutorial') ?? true;
     if (firstTime) {
       await Future.delayed(const Duration(milliseconds: 1500));
@@ -903,7 +876,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
       key: key,
       minWidth: 40,
       onPressed: () {
-        if (!aktifMi) HapticFeedback.lightImpact();
+        if (!aktifMi) if (titresimAcik.value) HapticFeedback.lightImpact();
         setState(() {
           _seciliSayfaIndex = index;
         });
@@ -936,7 +909,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
               canPop: false,
               onPopInvokedWithResult: (didPop, result) async {
                 if (didPop) return;
-                HapticFeedback.lightImpact();
+                if (titresimAcik.value) HapticFeedback.lightImpact();
                 await showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
@@ -983,9 +956,9 @@ class _AnaSayfaState extends State<AnaSayfa> {
                   ],
                 ),
                 floatingActionButton: FloatingActionButton(
-                  key: _AnaSayfaState.fabKey,
+                  key: fabKey,
                   onPressed: () {
-                    HapticFeedback.lightImpact();
+                    if (titresimAcik.value) HapticFeedback.lightImpact();
                     bool wasInTutorial = false;
                     if (_tutorialStep == 8) {
                       setState(() => _tutorialStep = -1);
@@ -1019,20 +992,20 @@ class _AnaSayfaState extends State<AnaSayfa> {
                           Icons.photo_library_outlined,
                           t('discover_tab'),
                           1,
-                          key: _AnaSayfaState.kesfetKey,
+                          key: kesfetKey,
                         ),
                         const SizedBox(width: 40),
                         _altMenusuButonuOlustur(
                           Icons.diamond_outlined,
                           t('store_tab'),
                           2,
-                          key: _AnaSayfaState.magazaKey,
+                          key: magazaKey,
                         ),
                         _altMenusuButonuOlustur(
                           Icons.person_outline,
                           t('profile_tab'),
                           3,
-                          key: _AnaSayfaState.profilKey,
+                          key: profilKey,
                         ),
                       ],
                     ),
@@ -1082,17 +1055,17 @@ class _AnaSayfaState extends State<AnaSayfa> {
         desc = "Tasarımlar hakkında fikirlerini paylaş ve diğer kullanıcılarla etkileşime geç.";
         break;
       case 6:
-        targetKey = _AnaSayfaState.magazaKey;
+        targetKey = magazaKey;
         title = "Mağaza";
         desc = "Arkadaşlarını davet ederek kredi kazanabilir veya yeni kredi paketleri alabilirsin.";
         break;
       case 7:
-        targetKey = _AnaSayfaState.profilKey;
+        targetKey = profilKey;
         title = "Profil";
         desc = "Hesap bilgilerini, yasal metinleri ve iletişim detaylarını buradan yönet.";
         break;
       case 8:
-        targetKey = _AnaSayfaState.fabKey;
+        targetKey = fabKey;
         title = "Başla!";
         desc = "Tüm bu özellikleri kullanmak için sihirbaz değneğine tıkla ve projeni oluştur!";
         break;

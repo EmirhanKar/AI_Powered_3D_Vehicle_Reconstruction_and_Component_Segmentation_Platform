@@ -1,7 +1,8 @@
 #kullanıcı bilgilerini tutmak için oluşturulan tablo
 
-from sqlalchemy import Boolean, Column, Integer, String 
+from sqlalchemy import Boolean, Column, Integer, String, DateTime
 from sqlalchemy.orm import relationship
+import datetime
 
 from app.database.base import Base
 
@@ -16,6 +17,8 @@ class User(Base):
     phone_number = Column(String, default="")
     is_admin = Column(Boolean,default=False)
     referral_used = Column(Boolean, default=False)
+    game_score = Column(Integer, default=0)
+    game_score_updated_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
     
     likes = relationship("Like", back_populates="user")
     comments = relationship("Comment", back_populates="user")

@@ -38,7 +38,7 @@ class _ProjeTipiSecimSayfasiState extends State<ProjeTipiSecimSayfasi> {
   }
 
   void _handleSelect(String method) {
-    HapticFeedback.mediumImpact();
+    if (titresimAcik.value) HapticFeedback.mediumImpact();
     if (widget.isGuest) {
       showDialog(
         context: context,
@@ -497,7 +497,7 @@ class _FotografYuklemeSayfasiState extends State<FotografYuklemeSayfasi> {
   Widget _buildAracTipiChip(String label, String tip, Color anaRenk, Color koyuYuzey) {
     final secili = _aracTipi == tip;
     return GestureDetector(
-      onTap: () { HapticFeedback.selectionClick(); setState(() => _aracTipi = tip); },
+      onTap: () { if (titresimAcik.value) HapticFeedback.selectionClick(); setState(() => _aracTipi = tip); },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -512,7 +512,7 @@ class _FotografYuklemeSayfasiState extends State<FotografYuklemeSayfasi> {
   }
 
   Future<void> _fotografSec(int index) async {
-    HapticFeedback.selectionClick();
+    if (titresimAcik.value) HapticFeedback.selectionClick();
     ImageSource? source = _secilenKaynak;
 
     // Sadece ilk fotoğrafta kaynak sorulur
@@ -633,6 +633,7 @@ class _FotografYuklemeSayfasiState extends State<FotografYuklemeSayfasi> {
 
     return Scaffold(
       backgroundColor: koyuArkaplan,
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -920,6 +921,7 @@ class _ModifiyeSecimSayfasiState extends State<ModifiyeSecimSayfasi> {
   List<RenkModel> _renkler = [];
   bool _pluginsYukleniyor = true;
   String? _seciliKategori; // null = Tümü
+  int? _olusturulanScanId;
 
   @override
   void initState() {
@@ -978,7 +980,7 @@ class _ModifiyeSecimSayfasiState extends State<ModifiyeSecimSayfasi> {
     final secili = _seciliKategori == kategori;
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        if (titresimAcik.value) HapticFeedback.selectionClick();
         setState(() => _seciliKategori = kategori);
       },
       child: AnimatedContainer(
@@ -1038,25 +1040,37 @@ class _ModifiyeSecimSayfasiState extends State<ModifiyeSecimSayfasi> {
 
   // Fotoğrafları backend'e yükle → modifikasyon oluştur → RenderSayfası'na geç
   Future<void> _uretimiBaslat(BuildContext context) async {
-    HapticFeedback.mediumImpact();
+    if (titresimAcik.value) HapticFeedback.mediumImpact();
     setState(() => _isYukleniyor = true);
 
     try {
-      if (widget.photos != null &&
+      if ((widget.photos != null || widget.scanId != null) &&
           widget.carName != null &&
           widget.method != null) {
         debugPrint(
-          '📤 Fotoğraf yükleniyor: ${widget.photos!.length} adet, araç: ${widget.carName}, method: ${widget.method}',
+          '📤 İşlem başlatılıyor: araç: ${widget.carName}, method: ${widget.method}, scanId: ${widget.scanId}',
         );
 
         // 1) Backend'e fotoğrafları yükle
-        final scan = await ApiServisi().fotografYukle(
-          files: widget.photos!,
-          carName: widget.carName!,
-          method: widget.method!,
-        );
+        int currentScanId;
+        if (widget.scanId != null) {
+          currentScanId = widget.scanId!;
+        } else if (_olusturulanScanId != null) {
+          currentScanId = _olusturulanScanId!;
+        } else {
+          if (widget.photos == null) {
+             throw Exception('Fotoğraflar bulunamadı! Lütfen işlemi baştan başlatın.');
+          }
+          final scan = await ApiServisi().fotografYukle(
+            files: widget.photos!,
+            carName: widget.carName!,
+            method: widget.method!,
+          );
+          _olusturulanScanId = scan.scanId;
+          currentScanId = scan.scanId;
+        }
 
-        debugPrint('✅ Yükleme başarılı! Scan ID: ${scan.scanId}');
+        debugPrint('✅ Yükleme başarılı! Scan ID: $currentScanId');
 
         // 2) Jant/renk seçildiyse modifikasyon oluştur
         int? jantId =
@@ -1068,9 +1082,13 @@ class _ModifiyeSecimSayfasiState extends State<ModifiyeSecimSayfasi> {
             ? _renkler[_seciliRenkIndex].colorId
             : null;
 
+        if (jantId != null && jantId < 0) {
+          throw Exception("Seçtiğiniz jant (Örnek Jant) henüz veritabanına eklenmemiş. Lütfen başka bir jant seçin.");
+        }
+
         if (jantId != null || colorId != null) {
           await ApiServisi().modifikasyonOlustur(
-            scanId: scan.scanId,
+            scanId: currentScanId,
             jantId: jantId,
             colorId: colorId,
           );
@@ -1358,7 +1376,7 @@ class _ModifiyeSecimSayfasiState extends State<ModifiyeSecimSayfasi> {
                                 const Spacer(),
                                 GestureDetector(
                                   onTap: () {
-                                    HapticFeedback.selectionClick();
+                                    if (titresimAcik.value) HapticFeedback.selectionClick();
                                     setState(() => _seciliJantIndex = -1);
                                   },
                                   child: Container(
@@ -1432,7 +1450,7 @@ class _ModifiyeSecimSayfasiState extends State<ModifiyeSecimSayfasi> {
                                         ApiServisi.buildImageUrl(jant.imageUrl);
                                     return GestureDetector(
                                       onTap: () {
-                                        HapticFeedback.selectionClick();
+                                        if (titresimAcik.value) HapticFeedback.selectionClick();
                                         setState(
                                           () => _seciliJantIndex = gercekIndex,
                                         );
@@ -1650,7 +1668,7 @@ class _ModifiyeSecimSayfasiState extends State<ModifiyeSecimSayfasi> {
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed: () {
-                      HapticFeedback.lightImpact();
+                      if (titresimAcik.value) HapticFeedback.lightImpact();
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(

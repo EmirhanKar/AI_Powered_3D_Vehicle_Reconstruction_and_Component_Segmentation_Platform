@@ -10,12 +10,22 @@ final ValueNotifier<bool> isDarkMode = ValueNotifier(true); // default koyu
 Future<void> temaYukle() async {
   final prefs = await SharedPreferences.getInstance();
   isDarkMode.value = prefs.getBool('dark_mode') ?? true;
+  titresimAcik.value = prefs.getBool('vibration') ?? true;
 }
 
 Future<void> temaKaydet(bool dark) async {
   isDarkMode.value = dark;
   final prefs = await SharedPreferences.getInstance();
   await prefs.setBool('dark_mode', dark);
+}
+
+// --- TİTREŞİM ALTYAPISI ---
+final ValueNotifier<bool> titresimAcik = ValueNotifier(true);
+
+Future<void> titresimKaydet(bool acik) async {
+  titresimAcik.value = acik;
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool('vibration', acik);
 }
 
 // Tema renkleri yardımcı fonksiyonlar
@@ -61,7 +71,7 @@ final Map<String, Map<String, String>> translations = {
     'no': 'Hayır',
     'yes': 'Evet',
     'discover_title': 'Keşfet 🌍',
-    'discover_desc': 'Topluluğun En Alevli Tasarımlarına Göz At.',
+    'discover_desc': 'Topluluğun En Alevli Tasarımlarına Göz At.\n(Yenilemek için ekranı aşağı kaydırın)',
     'by': 'Yapan: ',
     'share_your_legend': 'Efsaneni Toplulukla Paylaş 🚀',
     'store_title': 'Mağaza',
@@ -279,7 +289,7 @@ final Map<String, Map<String, String>> translations = {
     'no': 'No',
     'yes': 'Yes',
     'discover_title': 'Discover 🌍',
-    'discover_desc': 'Check Out The Hottest Designs From The Community.',
+    'discover_desc': 'Check Out The Hottest Designs From The Community.\n(Pull down to refresh)',
     'by': 'By: ',
     'share_your_legend': 'Share Your Legend 🚀',
     'store_title': 'Store',

@@ -38,7 +38,7 @@ class _SekmeProfilState extends State<SekmeProfil> {
   static const String _privacyUrl = 'https://modifai.app/legal/privacy';
 
   Future<void> _yasalSayfaAc(String baslik, String url) async {
-    HapticFeedback.lightImpact();
+    if (titresimAcik.value) HapticFeedback.lightImpact();
     final uri = Uri.parse(url);
     try {
       final canLaunch = await canLaunchUrl(uri);
@@ -153,7 +153,7 @@ Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
   }
 
   void _temaSecDialoguGoster() {
-    HapticFeedback.lightImpact();
+    if (titresimAcik.value) HapticFeedback.lightImpact();
     showModalBottomSheet(
       context: context, backgroundColor: yuzeyRengi(),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
@@ -206,7 +206,7 @@ Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
 
   // Task 11: Kullanıcı bilgilerini düzenle
   void _bilgileriDuzenleSayfasiAc() {
-    HapticFeedback.lightImpact();
+    if (titresimAcik.value) HapticFeedback.lightImpact();
     final k = widget.kullanici;
     final adCtrl = TextEditingController(text: k?.name ?? '');
     final soyadCtrl = TextEditingController(text: k?.surname ?? '');
@@ -285,7 +285,7 @@ Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
 
   // Task 10: İletişim sayfası
   void _iletisimSayfasiAc() {
-    HapticFeedback.lightImpact();
+    if (titresimAcik.value) HapticFeedback.lightImpact();
     final konuCtrl = TextEditingController();
     final mesajCtrl = TextEditingController();
     XFile? ekFoto;
@@ -312,7 +312,7 @@ Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
                   const SizedBox(height: 12),
                   Text(t('contact_btn'), style: TextStyle(color: yaziRengi(), fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text('modifai.destek@gmail.com', style: TextStyle(color: ikinciYaziRengi(), fontSize: 12)),
+                  Text('info@modifiai.com', style: TextStyle(color: ikinciYaziRengi(), fontSize: 12)),
                 ]),
               ),
               const SizedBox(height: 24),
@@ -360,7 +360,7 @@ Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
                   // E-posta gönder
                   final subject = Uri.encodeComponent(konuCtrl.text.trim());
                   final body = Uri.encodeComponent(mesajCtrl.text.trim());
-                  final uri = Uri.parse('mailto:modifai.destek@gmail.com?subject=$subject&body=$body');
+                  final uri = Uri.parse('mailto:info@modifiai.com?subject=$subject&body=$body');
                   try {
                     await launchUrl(uri);
                   } catch (_) {}
@@ -413,7 +413,7 @@ Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
                     Positioned(bottom: 0, right: 0, child: InkWell(
                       onTap: () {
                         // BUG-14 FIX: Profil fotoğrafı düzenleme aktif
-                        HapticFeedback.lightImpact();
+                        if (titresimAcik.value) HapticFeedback.lightImpact();
                         showModalBottomSheet(
                           context: context,
                           backgroundColor: yuzeyRengi(),
@@ -527,9 +527,9 @@ Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
                 const SizedBox(height: 12),
                 _ayarButonu(t('lang_select'), Icons.language, () => widget.onLangTap?.call()),
                 _ayarButonu(t('theme_select'), Icons.palette, _temaSecDialoguGoster),
+                _titresimAyarButonu(),
                 // Task 11: Bilgileri düzenle — artık aktif
                 _ayarButonu(t('edit_user'), Icons.person, _bilgileriDuzenleSayfasiAc),
-                _ayarButonu(t('history'), Icons.history, () => ortakYakindaToastGoster(context)),
                 const SizedBox(height: 24),
                 // Yasal bilgiler
                 Text(t('legal_title'), style: TextStyle(color: yaziRengi(), fontSize: 20, fontWeight: FontWeight.bold)),
@@ -555,6 +555,32 @@ Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
           ],
         ),
       ),
+    );
+  }
+
+  Widget _titresimAyarButonu() {
+    return ValueListenableBuilder<bool>(
+      valueListenable: titresimAcik,
+      builder: (context, isAcik, child) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(12), border: Border.all(color: kartBorderRengi())),
+          child: Row(
+            children: [
+              Expanded(child: Text('Titreşim', style: TextStyle(color: yaziRengi(), fontSize: 14, fontWeight: FontWeight.w500))),
+              Switch(
+                value: isAcik,
+                activeColor: Colors.blueAccent,
+                onChanged: (val) {
+                  titresimKaydet(val);
+                  if (val) if (titresimAcik.value) HapticFeedback.mediumImpact();
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

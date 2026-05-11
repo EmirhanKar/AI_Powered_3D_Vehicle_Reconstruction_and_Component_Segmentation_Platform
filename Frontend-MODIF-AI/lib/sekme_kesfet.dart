@@ -30,7 +30,7 @@ class _SekmeKesfetState extends State<SekmeKesfet> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bunun için giriş yapmalısınız!')));
       return;
     }
-    HapticFeedback.selectionClick();
+    if (titresimAcik.value) HapticFeedback.selectionClick();
     final wasLiked = item.isLiked;
     setState(() {
       item.isLiked = !wasLiked;
@@ -52,7 +52,7 @@ class _SekmeKesfetState extends State<SekmeKesfet> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bunun için giriş yapmalısınız!')));
       return;
     }
-    HapticFeedback.lightImpact();
+    if (titresimAcik.value) HapticFeedback.lightImpact();
     Navigator.push(context, MaterialPageRoute(builder: (c) => GonderiDetaySayfasi(feedItem: item))).then((_) {
       // Detaydan dönünce feed kartlarını güncelle (yorum/beğeni sayısı değişmiş olabilir)
       if (mounted) setState(() {});
@@ -64,7 +64,7 @@ class _SekmeKesfetState extends State<SekmeKesfet> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bunun için giriş yapmalısınız!')));
       return;
     }
-    HapticFeedback.lightImpact();
+    if (titresimAcik.value) HapticFeedback.lightImpact();
     try {
       final garaj = await ApiServisi().garajiGetir();
       final tamamlananlar = garaj.where((s) => s.isCompleted).toList();
@@ -136,32 +136,43 @@ class _SekmeKesfetState extends State<SekmeKesfet> {
           ),
           // Feed
           Expanded(
-            child: widget.isGuest
-                ? _buildDummyGrid()
-                : FutureBuilder<List<FeedItem>>(
-                    future: _feedFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator(color: anaRenk));
-                      if (snapshot.hasError) return Center(child: Text("Bağlantı hatası", style: TextStyle(color: yaziRengi())));
-                      final items = snapshot.data ?? [];
-                      if (items.isEmpty) return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.explore_off, color: Colors.grey, size: 48), const SizedBox(height: 12), Text('Henüz paylaşım yok', style: TextStyle(color: ikinciYaziRengi(), fontSize: 16))]));
-                      return GridView.builder(
-                        padding: const EdgeInsets.all(16),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.68),
-                        itemCount: items.length,
-                        itemBuilder: (context, index) {
-                          final item = items[index];
-                          final thumbUrl = ApiServisi.buildImageUrl(item.thumbnailUrl);
-                          debugPrint('[Keşfet] scan=${item.scanId} thumbUrl=$thumbUrl raw=${item.thumbnailUrl}');
-                          final displayUrl = thumbUrl ?? 'https://images.unsplash.com/photo-1603386329225-868f9b1ee6c9?q=80&w=500';
-                          return GestureDetector(
-                            onTap: () => _yorumSayfasiAc(item),
-                            child: _kesfetKartiOlustur(item, displayUrl, index),
-                          );
-                        },
-                      );
-                    },
-                  ),
+            child: RefreshIndicator(
+              color: anaRenk,
+              onRefresh: () async {
+                if (!widget.isGuest) {
+                  setState(() {
+                    _feedFuture = ApiServisi().feedGetir();
+                  });
+                }
+                await Future.delayed(const Duration(milliseconds: 800));
+              },
+              child: widget.isGuest
+                  ? _buildDummyGrid()
+                  : FutureBuilder<List<FeedItem>>(
+                      future: _feedFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator(color: anaRenk));
+                        if (snapshot.hasError) return Center(child: Text("Bağlantı hatası", style: TextStyle(color: yaziRengi())));
+                        final items = snapshot.data ?? [];
+                        if (items.isEmpty) return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.explore_off, color: Colors.grey, size: 48), const SizedBox(height: 12), Text('Henüz paylaşım yok', style: TextStyle(color: ikinciYaziRengi(), fontSize: 16))]));
+                        return GridView.builder(
+                          padding: const EdgeInsets.all(16),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.68),
+                          itemCount: items.length,
+                          itemBuilder: (context, index) {
+                            final item = items[index];
+                            final thumbUrl = ApiServisi.buildImageUrl(item.thumbnailUrl);
+                            debugPrint('[Keşfet] scan=${item.scanId} thumbUrl=$thumbUrl raw=${item.thumbnailUrl}');
+                            final displayUrl = thumbUrl ?? 'https://images.unsplash.com/photo-1603386329225-868f9b1ee6c9?q=80&w=500';
+                            return GestureDetector(
+                              onTap: () => _yorumSayfasiAc(item),
+                              child: _kesfetKartiOlustur(item, displayUrl, index),
+                            );
+                          },
+                        );
+                      },
+                    ),
+            ),
           ),
         ],
       ),
@@ -252,7 +263,7 @@ class _GonderiDetaySayfasiState extends State<GonderiDetaySayfasi> {
   }
 
   Future<void> _begeniTiklaDetay() async {
-    HapticFeedback.selectionClick();
+    if (titresimAcik.value) HapticFeedback.selectionClick();
     final wasLiked = widget.feedItem.isLiked;
     setState(() {
       widget.feedItem.isLiked = !wasLiked;
@@ -291,7 +302,7 @@ class _GonderiDetaySayfasiState extends State<GonderiDetaySayfasi> {
     // Madde 2: Sadece 1 kez (zaten beğendiyse geri almaz mantığı isteğe bağlı ama "1 kullanıcı 1 tane atabilsin" denmiş)
     if (yorum.isLiked) return;
 
-    HapticFeedback.selectionClick();
+    if (titresimAcik.value) HapticFeedback.selectionClick();
     setState(() {
       yorum.isLiked = true;
       yorum.likeCount++;
