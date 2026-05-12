@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, model_validator
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 
 class ScanBase(BaseModel):
@@ -10,6 +10,22 @@ class ScanBase(BaseModel):
 
 class ScanCreate(ScanBase):
     user_id: int
+
+class JantBrief(BaseModel):
+    model_name: str
+    class Config:
+        from_attributes = True
+
+class ColorBrief(BaseModel):
+    color_code: str
+    class Config:
+        from_attributes = True
+
+class ModificationBrief(BaseModel):
+    jant: Optional[JantBrief] = None
+    colors: Optional[ColorBrief] = None
+    class Config:
+        from_attributes = True
 
 
 class Processed3DInfo(BaseModel):
@@ -41,6 +57,7 @@ class ScanResponse(BaseModel):
     # uselist=False olduğu için List değil Optional obje
     processed_3d: Optional[Processed3DInfo] = Field(default=None, exclude=True)
     processed_2d: Optional[Processed2DInfo] = Field(default=None, exclude=True)
+    modifications: List[ModificationBrief] = Field(default=[])
 
     class Config:
         from_attributes = True

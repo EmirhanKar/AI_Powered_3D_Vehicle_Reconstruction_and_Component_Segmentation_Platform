@@ -9,6 +9,7 @@ import 'modeller/scan_model.dart';
 import 'modeller/draft_model.dart';
 import 'servisler/api_servisi.dart';
 import 'oyun_sayfasi.dart';
+import 'sekme_garaj.dart';
 
 class SekmeAnaSayfa extends StatefulWidget {
   final Kullanici? kullanici;
@@ -117,7 +118,7 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
       child: Column(children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Row(children: [Container(width: 4, height: 20, color: anaRenk), const SizedBox(width: 8), Text(t('my_garage'), style: TextStyle(color: yaziRengi(), fontSize: 20, fontWeight: FontWeight.bold))]),
-          TextButton(onPressed: () { if (titresimAcik.value) HapticFeedback.lightImpact(); Navigator.push(context, MaterialPageRoute(builder: (context) => const TumGarajSayfasi())); }, child: Row(children: [Text(t('see_all'), style: TextStyle(color: anaRenk, fontSize: 12)), Icon(Icons.arrow_forward_ios, color: anaRenk, size: 12)])),
+          TextButton(onPressed: () { if (titresimAcik.value) HapticFeedback.lightImpact(); Navigator.push(context, MaterialPageRoute(builder: (context) => SekmeGaraj(kullanici: widget.kullanici, isGuest: widget.isGuest))); }, child: Row(children: [Text(t('see_all'), style: TextStyle(color: anaRenk, fontSize: 12)), Icon(Icons.arrow_forward_ios, color: anaRenk, size: 12)])),
         ]),
         const SizedBox(height: 8),
         if (widget.isGuest)
@@ -210,9 +211,31 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
                     child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(scan.carName, style: TextStyle(color: yaziRengi(), fontSize: 22, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
-                      _detaySatiri('Metod', scan.method == '3d' ? '3D Model' : '2D Modifiye'),
-                      _detaySatiri('Durum', scan.status == 'completed' ? 'Tamamlandı ✅' : scan.status),
                       _detaySatiri('Oluşturulma', _zamanHesapla(scan.createdAt)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Modifiyeler:', style: TextStyle(color: ikinciYaziRengi(), fontSize: 14)),
+                            const SizedBox(height: 8),
+                            if (scan.modifications.isEmpty)
+                              Text('Modifiye yok', style: TextStyle(color: yaziRengi(), fontSize: 14, fontWeight: FontWeight.w600))
+                            else
+                              ...scan.modifications.map((m) {
+                                List<String> details = [];
+                                if (m.jantName != null) details.add('Jant: ${m.jantName}');
+                                if (m.colorCode != null) details.add('Renk: ${m.colorCode}');
+                                if (details.isEmpty) return const SizedBox.shrink();
+                                
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 4.0),
+                                  child: Text('• ${details.join(", ")}', style: TextStyle(color: yaziRengi(), fontSize: 14, fontWeight: FontWeight.w600)),
+                                );
+                              }),
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 16),
                     ]),
                   ));

@@ -100,6 +100,8 @@ class ArabaKartiOlusturucu {
     VoidCallback? onPaylas,
     VoidCallback? onSil,
     VoidCallback? onDetay,
+    bool showEditButton = true,
+    VoidCallback? onGoster,
   }) {
     return Container(
       decoration: BoxDecoration(color: koyuYuzey, borderRadius: BorderRadius.circular(16), border: Border.all(color: kartBorderRengi())),
@@ -154,12 +156,22 @@ class ArabaKartiOlusturucu {
                           child: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.share, color: Colors.green, size: 16)),
                         ),
                         const SizedBox(width: 8),
+                        // Göster butonu (Opsiyonel)
+                        if (onGoster != null) ...[
+                          InkWell(
+                            onTap: onGoster,
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(color: anaRenk, borderRadius: BorderRadius.circular(8)), child: const Text('Göster', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                         // Düzenle butonu
-                        InkWell(
-                          onTap: onDuzenle,
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(color: anaRenk, borderRadius: BorderRadius.circular(8)), child: Text(t('edit'), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
-                        ),
+                        if (showEditButton)
+                          InkWell(
+                            onTap: onDuzenle,
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(color: anaRenk, borderRadius: BorderRadius.circular(8)), child: Text(t('edit'), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
+                          ),
                       ],
                     )
                   ],

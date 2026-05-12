@@ -477,10 +477,9 @@ class _FotografYuklemeSayfasiState extends State<FotografYuklemeSayfasi> {
   final List<XFile> _seciliResimler = [];
   final _carNameCtrl = TextEditingController();
   ImageSource? _secilenKaynak;
-  String _aracTipi = 'sedan'; // sedan, hatchback, suv
 
   List<String> get _acilar => widget.method == '2d'
-      ? ['Ön', 'Arka', 'Sağ Yan', 'Sol Yan']
+      ? ['Araç']
       : [
           'Ön',
           'Sağ Yan',
@@ -492,24 +491,7 @@ class _FotografYuklemeSayfasiState extends State<FotografYuklemeSayfasi> {
           'Arka Sol',
         ];
 
-  int get _gerekliSayi => widget.method == '2d' ? 4 : 8;
-
-  Widget _buildAracTipiChip(String label, String tip, Color anaRenk, Color koyuYuzey) {
-    final secili = _aracTipi == tip;
-    return GestureDetector(
-      onTap: () { if (titresimAcik.value) HapticFeedback.selectionClick(); setState(() => _aracTipi = tip); },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: secili ? anaRenk.withValues(alpha: 0.15) : koyuYuzey,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: secili ? anaRenk : Colors.white.withValues(alpha: 0.1), width: secili ? 1.5 : 1),
-        ),
-        child: Text(label, style: TextStyle(color: secili ? anaRenk : Colors.grey, fontSize: 12, fontWeight: secili ? FontWeight.bold : FontWeight.normal)),
-      ),
-    );
-  }
+  int get _gerekliSayi => widget.method == '2d' ? 1 : 8;
 
   Future<void> _fotografSec(int index) async {
     if (titresimAcik.value) HapticFeedback.selectionClick();
@@ -565,7 +547,6 @@ class _FotografYuklemeSayfasiState extends State<FotografYuklemeSayfasi> {
             aci: _acilar[index],
             currentIndex: index,
             totalCount: _gerekliSayi,
-            aracTipi: _aracTipi,
           ),
         ),
       );
@@ -682,6 +663,28 @@ class _FotografYuklemeSayfasiState extends State<FotografYuklemeSayfasi> {
                 ),
               ),
               const SizedBox(height: 12),
+              if (!is3d)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'En iyi sonuç için aracınızı güzel bir açıdan çekin ve fotoğrafta sadece modifiye edilecek araç bulunsun.',
+                          style: TextStyle(color: Colors.orange, fontSize: 12, height: 1.3),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               TextField(
                 controller: _carNameCtrl,
                 style: const TextStyle(color: Colors.white),
@@ -701,17 +704,6 @@ class _FotografYuklemeSayfasiState extends State<FotografYuklemeSayfasi> {
                 ),
               ),
               const SizedBox(height: 12),
-              // Araç tipi seçimi
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildAracTipiChip('🚗 Sedan', 'sedan', anaRenk, koyuYuzey),
-                  const SizedBox(width: 8),
-                  _buildAracTipiChip('🚙 Hatchback', 'hatchback', anaRenk, koyuYuzey),
-                  const SizedBox(width: 8),
-                  _buildAracTipiChip('🚘 SUV', 'suv', anaRenk, koyuYuzey),
-                ],
-              ),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -929,15 +921,7 @@ class _ModifiyeSecimSayfasiState extends State<ModifiyeSecimSayfasi> {
     _pluginlariYukle();
   }
 
-  // Lokal fallback jant listesi (backend boşsa bunlar gösterilir)
-  static final List<JantModel> _lokalJantlar = [
-    JantModel(jantId: -1, modelName: 'BBS RS', category: 'sport', imageUrl: null, lokalAsset: 'assets/jantlar/bbs_rs.png'),
-    JantModel(jantId: -2, modelName: 'Vossen VFS-1', category: 'sport', imageUrl: null, lokalAsset: 'assets/jantlar/vossen_vfs1.png'),
-    JantModel(jantId: -3, modelName: 'Rotiform BLQ', category: 'sport', imageUrl: null, lokalAsset: 'assets/jantlar/rotiform_blq.png'),
-    JantModel(jantId: -4, modelName: 'Work Meister', category: 'classic', imageUrl: null, lokalAsset: 'assets/jantlar/work_meister.png'),
-    JantModel(jantId: -5, modelName: 'TE37 Saga', category: 'classic', imageUrl: null, lokalAsset: 'assets/jantlar/te37_saga.png'),
-    JantModel(jantId: -6, modelName: 'Fuel Rebel', category: 'suv', imageUrl: null, lokalAsset: 'assets/jantlar/fuel_rebel.png'),
-  ];
+
 
   Future<void> _pluginlariYukle() async {
     try {
@@ -945,16 +929,14 @@ class _ModifiyeSecimSayfasiState extends State<ModifiyeSecimSayfasi> {
       final renkler = await ApiServisi().renkleriGetir();
       if (mounted) {
         setState(() {
-          _jantlar = jantlar.isNotEmpty ? jantlar : _lokalJantlar;
+          _jantlar = jantlar;
           _renkler = renkler;
           _pluginsYukleniyor = false;
         });
       }
     } catch (e) {
-      // API erişilemezse lokal jantları göster
       if (mounted) {
         setState(() {
-          _jantlar = _lokalJantlar;
           _pluginsYukleniyor = false;
         });
       }
@@ -1482,20 +1464,7 @@ class _ModifiyeSecimSayfasiState extends State<ModifiyeSecimSayfasi> {
                                           borderRadius: BorderRadius.circular(14),
                                           child: Stack(
                                             children: [
-                                              // Jant görseli (lokal veya network)
-                                              if (jant.isLokal)
-                                                Positioned.fill(
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.all(8),
-                                                    child: Image.asset(
-                                                      jant.lokalAsset!,
-                                                      fit: BoxFit.contain,
-                                                      errorBuilder: (c, e, s) =>
-                                                          _buildJantPlaceholder(),
-                                                    ),
-                                                  ),
-                                                )
-                                              else if (jantImgUrl != null)
+                                              if (jantImgUrl != null)
                                                 Positioned.fill(
                                                   child: Padding(
                                                     padding: const EdgeInsets.all(8),

@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 from app.database.db import get_session
 from app.database.schemas import ScanResponse, ScanCreate
 from app.database.crud import scanCreate, scanImageCreate, get_user_scans, scan_crud
-from app.database.models import Scans, Processed3D, Processed2D, User, UserStats
+from app.database.models import Scans, Processed3D, Processed2D, User, UserStats, Modification
 from typing import List
 from PIL import Image
 import os
@@ -33,7 +33,7 @@ ALLOWED_CONTENT_TYPES = {
 
 # Fotoğraf sayısı kuralları
 PHOTO_COUNTS = {
-    "2d": 4,
+    "2d": 1,
     "3d": 8,
 }
 
@@ -164,7 +164,12 @@ async def upload_image(
     result = await db.execute(
         select(Scans)
         .where(Scans.scan_id == new_scan.scan_id)
-        .options(selectinload(Scans.processed_3d), selectinload(Scans.processed_2d))
+        .options(
+            selectinload(Scans.processed_3d),
+            selectinload(Scans.processed_2d),
+            selectinload(Scans.modifications).selectinload(Modification.jant),
+            selectinload(Scans.modifications).selectinload(Modification.colors)
+        )
     )
     return result.scalar_one()
 
@@ -177,7 +182,12 @@ async def get_pending_3d_scans(db: AsyncSession = Depends(get_session)):
         .join(Processed3D)
         .where(Scans.method == "3d")
         .where(Processed3D.model_url == None)
-        .options(selectinload(Scans.processed_3d), selectinload(Scans.processed_2d))
+        .options(
+            selectinload(Scans.processed_3d),
+            selectinload(Scans.processed_2d),
+            selectinload(Scans.modifications).selectinload(Modification.jant),
+            selectinload(Scans.modifications).selectinload(Modification.colors)
+        )
     )
     result = await db.execute(query)
     return result.scalars().all()
@@ -210,6 +220,26 @@ async def complete_3d_model(
     await db.commit()
 
     return {"status": "success", "message": "3D model yüklendi!", "model_url": full_path}
+
+
+# upload_image_router.py'ye eklenecek
+
+@router.get("/pending_2d", response_model=List[ScanResponse])
+async def get_pending_2d_scans(db: AsyncSession = Depends(get_session)):
+    """2D segmentasyon bekleyen taramaları listeler. (AI servisi için)"""
+    query = (
+        select(Scans)
+        .join(Processed2D)
+        .where(Scans.method == "2d")
+        .where(Scans.status == "pending")
+        .where(Processed2D.image_url == None)
+        .options(
+            selectinload(Scans.processed_2d),
+            selectinload(Scans.images),  # Orijinal fotoğrafları da ver
+        )
+    )
+    result = await db.execute(query)
+    return result.scalars().all()
 
 
 @router.post("/complete/2d/{scan_id}", tags=["Admin/Modeller"])

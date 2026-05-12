@@ -2,7 +2,7 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.database.models import Scans
+from app.database.models import Scans, Modification
 from app.database.schemas import ScanCreate
 from sqlalchemy.orm import selectinload
 
@@ -50,7 +50,9 @@ async def get_user_scans(db: AsyncSession, user_id: int):
         .where(Scans.user_id == user_id, Scans.status == "completed")
         .options(
             selectinload(Scans.processed_2d),
-            selectinload(Scans.processed_3d)
+            selectinload(Scans.processed_3d),
+            selectinload(Scans.modifications).selectinload(Modification.jant),
+            selectinload(Scans.modifications).selectinload(Modification.colors)
         )
         .order_by(Scans.created_at.desc())
     )
@@ -65,7 +67,9 @@ async def get_scan_by_id(db: AsyncSession, scan_id: int, user_id: int):
         .where(Scans.scan_id == scan_id, Scans.user_id == user_id)
         .options(
             selectinload(Scans.processed_2d),
-            selectinload(Scans.processed_3d)
+            selectinload(Scans.processed_3d),
+            selectinload(Scans.modifications).selectinload(Modification.jant),
+            selectinload(Scans.modifications).selectinload(Modification.colors)
         )
     )
     result = await db.execute(query)

@@ -1,0 +1,26 @@
+import subprocess
+import os
+
+# -------------------------------
+# Ayarlar
+# -------------------------------
+images_folder = r"C:\Users\Turkuaz\Desktop\segmentasyon\images"    # Fotoğrafların bulunduğu klasör
+output_folder = r"C:\Users\Turkuaz\Desktop\segmentasyon"       # Meshroom çıktılarının kaydedileceği klasör
+meshroom_path = r"C:\Users\Turkuaz\Desktop\Meshroom-2025.1.0\meshroom_batch.exe" # Meshroom batch çalıştırılabilir yolu
+
+# Çıkış klasörü yoksa oluştur
+os.makedirs(output_folder, exist_ok=True)
+
+# -------------------------------
+# Meshroom komut satırı çalıştırma
+# -------------------------------
+try:
+    print("Meshroom çalıştırılıyor...")
+    subprocess.run([
+        meshroom_path,
+        "--input", images_folder,
+        "--output", output_folder
+    ], check=True)
+    print(f"İşlem tamamlandı! Çıktılar '{output_folder}' klasöründe.")
+except subprocess.CalledProcessError as e:
+    print("Meshroom çalıştırılırken hata oluştu:", e)

@@ -9,6 +9,7 @@ import 'sekme_kesfet.dart';
 import 'sekme_magaza.dart';
 import 'sekme_profil.dart';
 import 'sekme_bildirim.dart';
+import 'sekme_garaj.dart';
 import 'servisler/api_servisi.dart';
 import 'servisler/auth_servisi.dart';
 import 'modeller/kullanici_model.dart';

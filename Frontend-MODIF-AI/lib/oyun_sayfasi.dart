@@ -20,6 +20,9 @@ class RenderSayfasi extends StatefulWidget {
 
 class _RenderSayfasiState extends State<RenderSayfasi>
     with SingleTickerProviderStateMixin {
+  static const int RENDER_SURE_2D = 60; // saniye
+  static const int RENDER_SURE_3D = 180; // saniye
+
   late AnimationController _animasyonKontrolcusu;
   late final int _toplamSureSaniye;
 
@@ -52,7 +55,7 @@ class _RenderSayfasiState extends State<RenderSayfasi>
   @override
   void initState() {
     super.initState();
-    _toplamSureSaniye = widget.method == '2d' ? 60 : 180;
+    _toplamSureSaniye = widget.method == '2d' ? RENDER_SURE_2D : RENDER_SURE_3D;
     
     _liderlikTablosuVeEfsaneleriGetir();
     _animasyonKontrolcusu =
@@ -349,14 +352,16 @@ class _RenderSayfasiState extends State<RenderSayfasi>
                           ),
                           const SizedBox(height: 12),
                           if (islemBittiMi)
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                if (titresimAcik.value) HapticFeedback.mediumImpact();
-                                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AnaSayfa()));
-                              },
-                              icon: const Icon(Icons.garage, color: Colors.white),
-                              label: Text(t('return_garage'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                t('render_done_banner'),
+                                style: premiumNumberStyle.copyWith(
+                                  color: Colors.green,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             )
                           else
                             Align(
@@ -537,9 +542,9 @@ class _RenderSayfasiState extends State<RenderSayfasi>
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                          t('crashed'),
-                                          style: const TextStyle(
-                                            color: Colors.redAccent,
+                                          islemBittiMi ? "Rendırınız Bitti" : t('crashed'),
+                                          style: TextStyle(
+                                            color: islemBittiMi ? Colors.green : Colors.redAccent,
                                             fontSize: 28,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -553,35 +558,50 @@ class _RenderSayfasiState extends State<RenderSayfasi>
                                           ),
                                         ),
                                         const SizedBox(height: 24),
-                                        ElevatedButton.icon(
-                                          onPressed: () {
-                                            if (titresimAcik.value) HapticFeedback.mediumImpact();
-                                            _oyunuBaslat();
-                                          },
-                                          icon: const Icon(
-                                            Icons.refresh,
-                                            color: Colors.white,
-                                          ),
-                                          label: Text(
-                                            t('play_again'),
-                                            style: const TextStyle(
+                                        if (islemBittiMi)
+                                          ElevatedButton.icon(
+                                            onPressed: () {
+                                              if (titresimAcik.value) HapticFeedback.mediumImpact();
+                                              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AnaSayfa()));
+                                            },
+                                            icon: const Icon(Icons.garage, color: Colors.white),
+                                            label: Text(t('return_garage'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.green,
+                                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                            ),
+                                          )
+                                        else
+                                          ElevatedButton.icon(
+                                            onPressed: () {
+                                              if (titresimAcik.value) HapticFeedback.mediumImpact();
+                                              _oyunuBaslat();
+                                            },
+                                            icon: const Icon(
+                                              Icons.refresh,
                                               color: Colors.white,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            label: Text(
+                                              t('play_again'),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: anaRenk,
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 24,
+                                                vertical: 12,
+                                              ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
                                             ),
                                           ),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: anaRenk,
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 24,
-                                              vertical: 12,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                          ),
-                                        ),
                                         const SizedBox(height: 30),
                                         Container(
                                           padding: const EdgeInsets.all(12),

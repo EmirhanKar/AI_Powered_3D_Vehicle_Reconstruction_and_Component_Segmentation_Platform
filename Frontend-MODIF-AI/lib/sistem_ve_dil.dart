@@ -183,7 +183,7 @@ final Map<String, Map<String, String>> translations = {
     'faq_7_q': 'Toplulukta paylaşım nasıl yapılır?',
     'faq_7_a': 'Keşfet sekmesindeki "Toplulukla Paylaş" butonuna basarak garajınızdaki tamamlanmış araçları paylaşabilirsiniz.',
     'faq_8_q': 'İletişim bilgileri',
-    'faq_8_a': 'Destek için modifai.destek@gmail.com adresine e-posta gönderebilirsiniz. Sosyal medya hesaplarımızı takip ederek güncellemelerden haberdar olabilirsiniz.',
+    'faq_8_a': 'Destek için info@modifiai.com adresine e-posta gönderebilirsiniz. Sosyal medya hesaplarımızı takip ederek güncellemelerden haberdar olabilirsiniz.',
     // Davet
     'invite_title': 'Arkadaşını Davet Et',
     'invite_desc': 'Aşağıdaki platformlardan birini seçerek uygulama linkini paylaş ve 50 kredi kazan!',
@@ -401,7 +401,7 @@ final Map<String, Map<String, String>> translations = {
     'faq_7_q': 'How to share in the community?',
     'faq_7_a': 'Tap "Share With Community" button in the Discover tab to share your completed cars.',
     'faq_8_q': 'Contact information',
-    'faq_8_a': 'For support, send an email to modifai.destek@gmail.com. Follow our social media accounts for updates.',
+    'faq_8_a': 'For support, send an email to info@modifiai.com. Follow our social media accounts for updates.',
     // Invite
     'invite_title': 'Invite a Friend',
     'invite_desc': 'Share the app link via one of the platforms below and earn 50 credits!',

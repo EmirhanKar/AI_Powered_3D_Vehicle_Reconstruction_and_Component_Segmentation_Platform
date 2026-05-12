@@ -1,3 +1,17 @@
+class Modification {
+  final String? jantName;
+  final String? colorCode;
+  
+  Modification({this.jantName, this.colorCode});
+  
+  factory Modification.fromJson(Map<String, dynamic> json) {
+    return Modification(
+      jantName: json['jant']?['model_name'],
+      colorCode: json['colors']?['color_code'],
+    );
+  }
+}
+
 /// Backend ScanResponse schema'sına uygun tarama modeli.
 class Scan {
   final int scanId;
@@ -8,6 +22,7 @@ class Scan {
   final String? description;
   final String? thumbnailUrl;
   final String? modelUrl; // 3D model hazırsa dolu gelir
+  final List<Modification> modifications;
 
   Scan({
     required this.scanId,
@@ -18,9 +33,15 @@ class Scan {
     this.description,
     this.thumbnailUrl,
     this.modelUrl,
+    this.modifications = const [],
   });
 
   factory Scan.fromJson(Map<String, dynamic> json) {
+    List<Modification> mods = [];
+    if (json['modifications'] != null) {
+      mods = (json['modifications'] as List).map((m) => Modification.fromJson(m)).toList();
+    }
+
     return Scan(
       scanId: json['scan_id'],
       method: json['method'] ?? '',
@@ -30,6 +51,7 @@ class Scan {
       description: json['description'],
       thumbnailUrl: json['thumbnail_url'],
       modelUrl: json['model_url'], // EKLENDİ
+      modifications: mods,
     );
   }
 

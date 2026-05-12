@@ -1,0 +1,9 @@
+torch
+torchvision
+ultralytics
+opencv-python
+numpy
+scipy
+open3d
+matplotlib
+segment-anything
