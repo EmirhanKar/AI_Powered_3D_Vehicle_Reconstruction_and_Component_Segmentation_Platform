@@ -206,3 +206,111 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+
+# ===========================
+# BÜYÜK MODEL DOSYALARI
+# ===========================
+
+# Depth Anything V2 checkpoint
+Depth-Anything-V2/checkpoints/
+Depth-Anything-V2/assets/
+Depth-Anything/
+
+# SAM checkpoint
+SAM/
+
+# ===========================
+# PYTHON
+# ===========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+
+# ===========================
+# SANAL ORTAM
+# ===========================
+venv/
+.venv/
+env/
+.env/
+
+# ===========================
+# GEÇİCİ ÇIKTI KLASÖRLER
+# ===========================
+temp_output/
+temp_3d_output/
+temp_scans/
+output/
+runs/
+
+# ===========================
+# MODEL / AĞIRLIK DOSYALARI
+# ===========================
+*.pth
+*.pt
+*.ckpt
+*.bin
+*.safetensors
+*.onnx
+*.pb
+
+# ===========================
+# BÜYÜK VERİ DOSYALARI
+# ===========================
+*.ply
+*.glb
+*.gltf
+*.obj
+*.fbx
+
+# ===========================
+# GÖRÜNTÜ / VİDEO
+# ===========================
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# ===========================
+# IDE / EDITOR
+# ===========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===========================
+# OS
+# ===========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===========================
+# LOG
+# ===========================
+*.log
+logs/
+
+# ===========================
+# GİZLİ AYARLAR
+# ===========================
+.env
+secrets.py
+config_local.py
