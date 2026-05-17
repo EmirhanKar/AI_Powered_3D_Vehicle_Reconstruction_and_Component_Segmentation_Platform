@@ -51,6 +51,7 @@ async def get_user_scans(db: AsyncSession, user_id: int):
         .options(
             selectinload(Scans.processed_2d),
             selectinload(Scans.processed_3d),
+            selectinload(Scans.images),
             selectinload(Scans.modifications).selectinload(Modification.jant),
             selectinload(Scans.modifications).selectinload(Modification.colors)
         )
@@ -68,6 +69,7 @@ async def get_scan_by_id(db: AsyncSession, scan_id: int, user_id: int):
         .options(
             selectinload(Scans.processed_2d),
             selectinload(Scans.processed_3d),
+            selectinload(Scans.images),
             selectinload(Scans.modifications).selectinload(Modification.jant),
             selectinload(Scans.modifications).selectinload(Modification.colors)
         )

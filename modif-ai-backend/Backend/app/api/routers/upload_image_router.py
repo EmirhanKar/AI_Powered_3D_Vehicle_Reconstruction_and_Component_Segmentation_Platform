@@ -167,12 +167,15 @@ async def upload_image(
         .options(
             selectinload(Scans.processed_3d),
             selectinload(Scans.processed_2d),
+            selectinload(Scans.images),
             selectinload(Scans.modifications).selectinload(Modification.jant),
             selectinload(Scans.modifications).selectinload(Modification.colors)
         )
     )
     return result.scalar_one()
 
+
+# upload_image_router.py içindeki pending_3d endpoint'ini bununla değiştir
 
 @router.get("/pending_3d", response_model=List[ScanResponse])
 async def get_pending_3d_scans(db: AsyncSession = Depends(get_session)):
@@ -185,13 +188,13 @@ async def get_pending_3d_scans(db: AsyncSession = Depends(get_session)):
         .options(
             selectinload(Scans.processed_3d),
             selectinload(Scans.processed_2d),
+            selectinload(Scans.images),                              # Fotoğraflar
             selectinload(Scans.modifications).selectinload(Modification.jant),
-            selectinload(Scans.modifications).selectinload(Modification.colors)
+            selectinload(Scans.modifications).selectinload(Modification.colors),
         )
     )
     result = await db.execute(query)
     return result.scalars().all()
-
 
 @router.post("/complete/3d/{scan_id}", tags=["Admin/Modeller"])
 async def complete_3d_model(
@@ -231,11 +234,14 @@ async def get_pending_2d_scans(db: AsyncSession = Depends(get_session)):
         select(Scans)
         .join(Processed2D)
         .where(Scans.method == "2d")
-        .where(Scans.status == "pending")
+        .where(Scans.status.in_(["pending", "plugin_selected"]))
         .where(Processed2D.image_url == None)
         .options(
             selectinload(Scans.processed_2d),
+            selectinload(Scans.processed_3d),
             selectinload(Scans.images),  # Orijinal fotoğrafları da ver
+            selectinload(Scans.modifications).selectinload(Modification.jant),
+            selectinload(Scans.modifications).selectinload(Modification.colors)
         )
     )
     result = await db.execute(query)
@@ -260,7 +266,7 @@ async def complete_2d_model(
     if not scan:
         raise HTTPException(status_code=404, detail=f"{scan_id} ID'li tarama bulunamadı!")
 
-    if scan.status != "pending":
+    if scan.status == "completed":
         return {"status": "skipped", "message": "Bu tarama zaten tamamlanmış."}
 
     # Sonuç görselini kaydet
@@ -339,7 +345,7 @@ async def get_scan_detail(
     result = await db.execute(
         select(Scans)
         .where(Scans.scan_id == scan_id)
-        .options(selectinload(Scans.processed_3d), selectinload(Scans.processed_2d))
+        .options(selectinload(Scans.processed_3d), selectinload(Scans.processed_2d), selectinload(Scans.images), selectinload(Scans.modifications).selectinload(Modification.jant), selectinload(Scans.modifications).selectinload(Modification.colors))
     )
     scan = result.scalar_one_or_none()
 

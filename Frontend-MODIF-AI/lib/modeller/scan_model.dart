@@ -22,6 +22,7 @@ class Scan {
   final String? description;
   final String? thumbnailUrl;
   final String? modelUrl; // 3D model hazırsa dolu gelir
+  final bool isShared; // Keşfette paylaşıldı mı?
   final List<Modification> modifications;
 
   Scan({
@@ -33,6 +34,7 @@ class Scan {
     this.description,
     this.thumbnailUrl,
     this.modelUrl,
+    this.isShared = false,
     this.modifications = const [],
   });
 
@@ -50,7 +52,8 @@ class Scan {
       carName: json['car_name'] ?? '',
       description: json['description'],
       thumbnailUrl: json['thumbnail_url'],
-      modelUrl: json['model_url'], // EKLENDİ
+      modelUrl: json['model_url'],
+      isShared: json['is_shared'] == true,
       modifications: mods,
     );
   }

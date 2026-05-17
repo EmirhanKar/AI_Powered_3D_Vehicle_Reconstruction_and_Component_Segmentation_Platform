@@ -1,4 +1,4 @@
-Path: C:\Users\Turkuaz\Desktop\segmentasyon
+Path: .
 train: ../train/images
 val: ../valid/images
 nc: 25

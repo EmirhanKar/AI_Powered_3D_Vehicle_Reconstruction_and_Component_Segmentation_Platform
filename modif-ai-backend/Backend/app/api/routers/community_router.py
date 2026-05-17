@@ -27,12 +27,13 @@ async def get_feed(
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    """Tüm kullanıcıların araçlarını keşfet sayfası için listeler."""
+    """Sadece toplulukla paylaşılmış araçları keşfet sayfası için listeler."""
 
-    # Tüm completed scan'leri getir
+    # Sadece is_shared=True olan completed scan'leri getir
     query = (
         select(Scans)
         .where(Scans.status == "completed")
+        .where(Scans.is_shared == True)
         .options(
             selectinload(Scans.processed_3d),
             selectinload(Scans.processed_2d),
@@ -186,3 +187,45 @@ async def delete_comment(
     await db.delete(comment)
     await db.commit()
     return {"message": "Yorum silindi."}
+
+
+# ─────────────────────────────────────────
+# TOPLULUKLA PAYLAŞMA
+# ─────────────────────────────────────────
+
+@router.post("/{scan_id}/share", status_code=status.HTTP_200_OK, tags=["Community"])
+async def share_to_community(
+    scan_id: int,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Aracı toplulukla paylaşır (keşfette görünür hale getirir)."""
+    scan = await db.get(Scans, scan_id)
+    if not scan:
+        raise HTTPException(status_code=404, detail="Araç bulunamadı.")
+    if scan.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Bu araca erişim yetkiniz yok.")
+    if scan.status != "completed":
+        raise HTTPException(status_code=400, detail="Sadece tamamlanmış araçlar paylaşılabilir.")
+
+    scan.is_shared = True
+    await db.commit()
+    return {"message": "Araç toplulukla paylaşıldı!", "is_shared": True}
+
+
+@router.post("/{scan_id}/unshare", status_code=status.HTTP_200_OK, tags=["Community"])
+async def unshare_from_community(
+    scan_id: int,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Aracı keşfetten kaldırır."""
+    scan = await db.get(Scans, scan_id)
+    if not scan:
+        raise HTTPException(status_code=404, detail="Araç bulunamadı.")
+    if scan.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Bu araca erişim yetkiniz yok.")
+
+    scan.is_shared = False
+    await db.commit()
+    return {"message": "Araç keşfetten kaldırıldı.", "is_shared": False}

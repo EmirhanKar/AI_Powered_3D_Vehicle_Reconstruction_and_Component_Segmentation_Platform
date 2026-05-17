@@ -7,17 +7,18 @@ import cv2
 import open3d as o3d
 import matplotlib.pyplot as plt
 from segment_anything import sam_model_registry, SamPredictor
-from depth_anything_3.api import DepthAnything3
+from depth_anything.dpt import DepthAnything
+from config import IMAGES_DIR, OUTPUT_DIR, SAM_CHECKPOINT
 
 # ----------------------------
 # PATH SETUP
 # ----------------------------
 def setup_paths():
     paths = {
-        "data": r"C:\Users\Turkuaz\Desktop\segmentasyon\images",
-        "results": r"C:\Users\Turkuaz\Desktop\segmentasyon\output",
-        "masks": r"C:\Users\Turkuaz\Desktop\segmentasyon\output\masks",
-        "sam_checkpoint": r"C:\Users\Turkuaz\Desktop\segmentasyon\SAM\sam_vit_h_4b8939.pth"
+        "data": IMAGES_DIR,
+        "results": OUTPUT_DIR,
+        "masks": os.path.join(OUTPUT_DIR, "masks"),
+        "sam_checkpoint": SAM_CHECKPOINT
     }
     os.makedirs(paths["results"], exist_ok=True)
     os.makedirs(paths["masks"], exist_ok=True)
@@ -276,45 +277,39 @@ def create_mesh(points, colors):
     print("✅ Renkli mesh hazır.")
     return mesh
 
-# ----------------------------
-# MAIN
-# ----------------------------
-if __name__ == "__main__":
-    paths = setup_paths()
-    print("Paths hazır.")
-
-    print("\n=== DA3 modeli yükleniyor ===")
-    model, device = load_da3_model()
-
-    print("\n=== SAM modeli yükleniyor ===")
-    sam_predictor = load_sam_model(paths["sam_checkpoint"])
-
+def generate_3d_model(input_dir, output_dir, sam_predictor, da3_model):
     print("\n=== Fotoğraflar yükleniyor ===")
-    image_files = load_images_from_folder(paths["data"])
+    image_files = load_images_from_folder(input_dir)
+    if not image_files:
+        print("Hiç fotoğraf bulunamadı!")
+        return None
+
+    masks_path = os.path.join(output_dir, "masks")
+    os.makedirs(masks_path, exist_ok=True)
 
     print("\n=== Maskeler oluşturuluyor ===")
-    mask_files = generate_masks(image_files, paths["masks"], sam_predictor)
+    mask_files = generate_masks(image_files, masks_path, sam_predictor)
 
     print("\n=== DA3 çıkarımı yapılıyor ===")
-    prediction = run_da3_inference(model, image_files)
+    prediction = run_da3_inference(da3_model, image_files)
 
-    # Derinlik haritasını göster
-    visualize_depth_and_confidence(
-        prediction.processed_images,
-        prediction.depth,
-        prediction.conf,
-        sample_idx=0
-    )
+    # Derinlik haritasını göster (KAPALI - Headless)
+    # visualize_depth_and_confidence(
+    #     prediction.processed_images,
+    #     prediction.depth,
+    #     prediction.conf,
+    #     sample_idx=0
+    # )
 
     print("\n=== Point cloud birleştiriliyor ===")
     points_3d, colors_3d = merge_point_clouds(prediction, mask_files, conf_thresh=0.7)
 
-    # Ham Point Cloud Kaydet ve Göster
+    # Ham Point Cloud Kaydet ve Göster (Gösterme kapalı)
     pcd_raw = o3d.geometry.PointCloud()
     pcd_raw.points = o3d.utility.Vector3dVector(points_3d)
     pcd_raw.colors = o3d.utility.Vector3dVector(colors_3d / 255.0 if colors_3d.max() > 1 else colors_3d)
-    o3d.io.write_point_cloud(os.path.join(paths["results"], "ham.ply"), pcd_raw)
-    visualize_point_cloud_open3d(points_3d, colors_3d, window_name="Ham Point Cloud")
+    o3d.io.write_point_cloud(os.path.join(output_dir, "ham.ply"), pcd_raw)
+    # visualize_point_cloud_open3d(points_3d, colors_3d, window_name="Ham Point Cloud")
 
     print("\n=== Temizleniyor ===")
     try:
@@ -324,36 +319,52 @@ if __name__ == "__main__":
         print("Open3D failed:", e)
         clean_pts, clean_cols = clean_point_cloud_scipy(points_3d, colors_3d)
 
-    # Temizlenmiş Point Cloud Kaydet ve Göster
+    # Temizlenmiş Point Cloud Kaydet ve Göster (Gösterme kapalı)
     pcd_clean = o3d.geometry.PointCloud()
     pcd_clean.points = o3d.utility.Vector3dVector(clean_pts)
     pcd_clean.colors = o3d.utility.Vector3dVector(clean_cols)
-    o3d.io.write_point_cloud(os.path.join(paths["results"], "temiz.ply"), pcd_clean)
-    visualize_point_cloud_open3d(clean_pts, clean_cols, window_name="Temiz Point Cloud (Araba)")
+    o3d.io.write_point_cloud(os.path.join(output_dir, "temiz.ply"), pcd_clean)
+    # visualize_point_cloud_open3d(clean_pts, clean_cols, window_name="Temiz Point Cloud (Araba)")
 
     # === MESH İŞLEMLERİ ===
     mesh = create_mesh(clean_pts, clean_cols)
 
+    final_glb_path = None
     if mesh is not None:
         # 1. Standart PLY Çıktısı (Bilgisayar/MeshLab için)
-        mesh_path = os.path.join(paths["results"], "araba_mesh.ply")
+        mesh_path = os.path.join(output_dir, "araba_mesh.ply")
         o3d.io.write_triangle_mesh(mesh_path, mesh)
         print(f"✅ Mesh (PLY) dosyası kaydedildi: {mesh_path}")
 
         # 2. Android Uygulaman İçin GLB Çıktısı (Renkli ve Optimize)
-        mesh_path_glb = os.path.join(paths["results"], "araba_modeli.glb")
+        mesh_path_glb = os.path.join(output_dir, "araba_modeli.glb")
         try:
             o3d.io.write_triangle_mesh(mesh_path_glb, mesh)
             print(f"🚀 ANDROID İÇİN GLB DOSYASI HAZIR: {mesh_path_glb}")
+            final_glb_path = mesh_path_glb
         except Exception as e:
             # GLB yazamazsa GLTF olarak dene (Android bunu da destekler)
-            mesh_path_gltf = os.path.join(paths["results"], "araba_modeli.gltf")
+            mesh_path_gltf = os.path.join(output_dir, "araba_modeli.gltf")
             o3d.io.write_triangle_mesh(mesh_path_gltf, mesh)
             print(f"🚀 ANDROID İÇİN GLTF DOSYASI HAZIR: {mesh_path_gltf}")
+            final_glb_path = mesh_path_gltf
 
-        print("🔥 Mesh ekranda gösteriliyor. (Kapatmak için pencereyi çarpıdan kapatın)")
-        o3d.visualization.draw_geometries([mesh], 
-                                          window_name="3D Araba Mesh Çıktısı",
-                                          mesh_show_back_face=True)
+        # print("🔥 Mesh ekranda gösteriliyor. (Kapatmak için pencereyi çarpıdan kapatın)")
+        # o3d.visualization.draw_geometries([mesh], 
+        #                                   window_name="3D Araba Mesh Çıktısı",
+        #                                   mesh_show_back_face=True)
 
     print(f"\n✓ İşlem başarıyla tamamlandı — {len(clean_pts)} nokta işlendi.")
+    return final_glb_path
+
+if __name__ == "__main__":
+    paths = setup_paths()
+    print("Paths hazır.")
+
+    print("\n=== DA3 modeli yükleniyor ===")
+    da3_model, device = load_da3_model()
+
+    print("\n=== SAM modeli yükleniyor ===")
+    sam_predictor = load_sam_model(paths["sam_checkpoint"])
+
+    generate_3d_model(paths["data"], paths["results"], sam_predictor, da3_model)

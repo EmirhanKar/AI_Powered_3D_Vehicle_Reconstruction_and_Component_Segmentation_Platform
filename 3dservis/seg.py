@@ -1,10 +1,12 @@
+import os
 import cv2
 from ultralytics import YOLO
+from config import IMAGES_DIR, JANT_DIR, YOLO_MODEL_PATH
 
 # --- Model ve görsel yolları ---
-model_path = r"C:\Users\Turkuaz\Desktop\segmentasyon\runs\segment\train4\weights\best.pt"
-image_path = r"C:\Users\Turkuaz\Desktop\segmentasyon\images\araba.jpeg"
-output_path = r"C:\Users\Turkuaz\Desktop\segmentasyon\jant_foto\sonuc.jpeg"
+model_path = YOLO_MODEL_PATH
+image_path = os.path.join(IMAGES_DIR, "araba.jpeg")
+output_path = os.path.join(JANT_DIR, "sonuc.jpeg")
 
 # --- Modeli yükle ---
 model = YOLO(model_path)

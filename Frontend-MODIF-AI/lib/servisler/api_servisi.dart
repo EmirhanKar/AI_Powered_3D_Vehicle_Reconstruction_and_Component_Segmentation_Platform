@@ -467,6 +467,19 @@ class ApiServisi {
     }
   }
 
+  Future<Map<String, dynamic>> kesfettenKaldir(int scanId) async {
+    final headers = await _authHeaders();
+    final response = await http
+        .post(Uri.parse('$baseUrl/community/$scanId/unshare'), headers: headers)
+        .timeout(_timeout);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Keşfetten kaldırma hatası: ${response.statusCode}');
+    }
+  }
+
   // ═══════════════════════════════════════════════════
   //  DAVET (REFERRAL) — +50 KREDİ
   // ═══════════════════════════════════════════════════

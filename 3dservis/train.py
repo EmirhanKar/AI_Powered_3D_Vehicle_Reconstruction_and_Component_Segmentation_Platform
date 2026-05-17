@@ -1,8 +1,9 @@
 from ultralytics import YOLO
+from config import YOLO_V8M_SEG
 
 if __name__ == "__main__":
     # YOLOv8m-seg modeli: 6GB GPU için güvenli ve küçük parçaları iyi öğrenir
-    model = YOLO(r"C:\Users\Turkuaz\Desktop\segmentasyon\yolov8m-seg.pt")
+    model = YOLO(YOLO_V8M_SEG)
 
     # Eğitim
     results = model.train(

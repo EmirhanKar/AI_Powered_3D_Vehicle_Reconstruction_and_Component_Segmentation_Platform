@@ -1,6 +1,7 @@
-import cv2, glob, numpy as np
+import cv2, glob, numpy as np, os
+from config import IMAGES_DIR
 
-image_files = sorted(glob.glob(r"C:\Users\Turkuaz\Desktop\segmentasyon\images\*"))
+image_files = sorted(glob.glob(os.path.join(IMAGES_DIR, "*")))
 
 orb = cv2.ORB_create(2000)
 bf  = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)

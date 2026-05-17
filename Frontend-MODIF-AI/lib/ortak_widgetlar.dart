@@ -102,6 +102,8 @@ class ArabaKartiOlusturucu {
     VoidCallback? onDetay,
     bool showEditButton = true,
     VoidCallback? onGoster,
+    VoidCallback? onKesfetPaylas,
+    bool isShared = false,
   }) {
     return Container(
       decoration: BoxDecoration(color: koyuYuzey, borderRadius: BorderRadius.circular(16), border: Border.all(color: kartBorderRengi())),
@@ -149,6 +151,26 @@ class ArabaKartiOlusturucu {
                     Row(children: [Icon(Icons.schedule, color: ikinciYaziRengi(), size: 14), const SizedBox(width: 4), Text(zaman, style: TextStyle(color: ikinciYaziRengi(), fontSize: 12))]),
                     Row(
                       children: [
+                        // Keşfette Paylaş butonu
+                        if (onKesfetPaylas != null) ...[
+                          InkWell(
+                            onTap: onKesfetPaylas,
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: isShared ? Colors.deepOrange.withValues(alpha: 0.15) : Colors.blue.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                isShared ? Icons.public : Icons.rocket_launch,
+                                color: isShared ? Colors.deepOrange : Colors.blue,
+                                size: 16,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                         // Paylaş butonu
                         InkWell(
                           onTap: onPaylas,

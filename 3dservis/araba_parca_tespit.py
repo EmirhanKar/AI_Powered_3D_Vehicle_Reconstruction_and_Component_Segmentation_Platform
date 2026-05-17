@@ -2,14 +2,15 @@ import os
 import glob
 import cv2
 from ultralytics import YOLO
+from config import IMAGES_DIR, OUTPUT_DIR, YOLO_MODEL_PATH
 
 
 # ----------------------------
 # PATHS
 # ----------------------------
-model_path = r"C:\Users\Turkuaz\Desktop\segmentasyon\runs\segment\train4\weights\best.pt"
-images_dir = r"C:\Users\Turkuaz\Desktop\segmentasyon\images"
-output_dir = r"C:\Users\Turkuaz\Desktop\segmentasyon\output\yolo_results"
+model_path = YOLO_MODEL_PATH
+images_dir = IMAGES_DIR
+output_dir = os.path.join(OUTPUT_DIR, "yolo_results")
 
 os.makedirs(output_dir, exist_ok=True)
 
