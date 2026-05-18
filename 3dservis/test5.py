@@ -8,15 +8,8 @@ import open3d as o3d
 from segment_anything import sam_model_registry, SamPredictor
 from config import IMAGES_DIR, OUTPUT_DIR, SAM_CHECKPOINT
 
-# ----------------------------
-# DEPTH ANYTHING V2 — Import
-# Depth-Anything-V2/ klasörü 3dservis/ altında olmalı
-# ----------------------------
-DEPTH_ANYTHING_V2_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Depth-Anything-V2")
-if DEPTH_ANYTHING_V2_PATH not in sys.path:
-    sys.path.insert(0, DEPTH_ANYTHING_V2_PATH)
-
-from depth_anything_v2.dpt import DepthAnythingV2
+sys.path.insert(0, r'D:\MODIFIAI\3dservis\Depth-Anything-3\src')
+from depth_anything_3.api import DepthAnything3
 
 # ----------------------------
 # PATH SETUP
@@ -39,34 +32,9 @@ def load_da3_model():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Kullanılan cihaz: {device}")
     torch.cuda.empty_cache()
-
-    model_configs = {
-        "vits": {"encoder": "vits", "features": 64,  "out_channels": [48,  96,  192, 384]},
-        "vitb": {"encoder": "vitb", "features": 128, "out_channels": [96,  192, 384, 768]},
-        "vitl": {"encoder": "vitl", "features": 256, "out_channels": [256, 512, 1024, 1024]},
-    }
-
-    encoder = "vitl"  # vitl=en iyi, vitb=orta, vits=hızlı
-    cfg = model_configs[encoder]
-
-    model = DepthAnythingV2(**cfg)
-
-    # Checkpoint: Depth-Anything-V2/checkpoints/depth_anything_v2_vitl.pth
-    # İndirme linki:
-    # https://huggingface.co/depth-anything/Depth-Anything-V2-Large/resolve/main/depth_anything_v2_vitl.pth
-    checkpoint_path = os.path.join(DEPTH_ANYTHING_V2_PATH, "checkpoints", f"depth_anything_v2_{encoder}.pth")
-
-    if not os.path.exists(checkpoint_path):
-        raise FileNotFoundError(
-            f"\n[HATA] Checkpoint bulunamadı: {checkpoint_path}\n"
-            f"Şuradan indir:\n"
-            f"https://huggingface.co/depth-anything/Depth-Anything-V2-Large/resolve/main/depth_anything_v2_vitl.pth\n"
-            f"Kaydet: {checkpoint_path}\n"
-        )
-
-    model.load_state_dict(torch.load(checkpoint_path, map_location="cpu"))
-    model = model.to(device).eval()
-    print(f"Depth Anything V2 ({encoder}) yüklendi.")
+    model = DepthAnything3.from_pretrained("depth-anything/DA3-LARGE-1.1")
+    model = model.to(device)
+    print("Depth Anything 3 (DA3-LARGE-1.1) yüklendi.")
     return model, device
 
 def load_sam_model(checkpoint_path):
@@ -82,60 +50,17 @@ def load_sam_model(checkpoint_path):
 # DEPTH INFERENCE
 # ----------------------------
 def run_da3_inference(model, device, image_files):
-    """
-    Tüm görüntüler için DA V2 derinlik çıkarımı yapar.
-    servis.py ile uyumlu Prediction nesnesi döner.
-    """
-    print(f"{len(image_files)} görüntü işleniyor...")
-    depths = []
-    processed_images = []
-    confs = []
-    intrinsics_list = []
-    extrinsics_list = []
-
-    for i, img_path in enumerate(image_files):
-        img_bgr = cv2.imread(img_path)
-        if img_bgr is None:
-            print(f"  [UYARI] Okunamadı: {img_path}")
-            continue
-
-        h, w = img_bgr.shape[:2]
-
-        # DA V2'nin kendi infer_image metodu — resize+normalize+forward+resize hepsini yapar
-        with torch.no_grad():
-            depth = model.infer_image(img_bgr)  # (H, W) numpy array
-
-        img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-        depths.append(depth)
-        processed_images.append(img_rgb)
-
-        # Confidence: derinlik gradyanından tahmin (DA V2 confidence üretmez)
-        grad_x = np.abs(np.gradient(depth, axis=1))
-        grad_y = np.abs(np.gradient(depth, axis=0))
-        conf = 1.0 / (1.0 + grad_x + grad_y)
-        confs.append(conf)
-
-        # Pinhole kamera — HFOV=60 derece varsayımı
-        fx = fy = w / (2 * np.tan(np.radians(30)))
-        cx, cy = w / 2.0, h / 2.0
-        K = np.array([[fx, 0, cx],
-                      [0, fy, cy],
-                      [0,  0,  1]], dtype=np.float64)
-        intrinsics_list.append(K)
-        extrinsics_list.append(np.eye(4, dtype=np.float64))
-
-        print(f"  [{i+1}/{len(image_files)}] {os.path.basename(img_path)} tamamlandı.")
-
-    class Prediction:
-        pass
-
-    pred = Prediction()
-    pred.depth = depths
-    pred.processed_images = processed_images
-    pred.conf = confs
-    pred.intrinsics = intrinsics_list
-    pred.extrinsics = extrinsics_list
-    return pred
+    print(f"{len(image_files)} görüntü DA3'e gönderiliyor...")
+    with torch.no_grad():
+        prediction = model.inference(
+            image=image_files,
+            infer_gs=False,
+            process_res_method="upper_bound_resize"
+        )
+    print(f"DA3 tamamlandı.")
+    print(f"  depth shape: {prediction.depth.shape}, min/max: {prediction.depth.min():.2f}/{prediction.depth.max():.2f}")
+    print(f"  conf shape: {prediction.conf.shape}, min/max: {prediction.conf.min():.2f}/{prediction.conf.max():.2f}")
+    return prediction
 
 # ----------------------------
 # SAM MASK
@@ -202,22 +127,29 @@ def load_images_from_folder(data_path, extensions=["*.jpg", "*.png", "*.jpeg", "
 
 # ----------------------------
 # POINT CLOUD
+# conf DA3'te 1.0-10.0 arası — yüksek conf = düz yüzey = güvenilir
+# depth 0.4-10.0 metre arası metrik
 # ----------------------------
-def depth_to_point_cloud(depth_map, rgb_image, intrinsics, extrinsics, car_mask, conf_map=None, conf_thresh=0.5):
+def depth_to_point_cloud(depth_map, rgb_image, intrinsics, extrinsics_34, car_mask, conf_map=None, conf_thresh=2.0):
     h, w = depth_map.shape
-    fx, fy = intrinsics[0, 0], intrinsics[1, 1]
-    cx, cy = intrinsics[0, 2], intrinsics[1, 2]
+    fx, fy = float(intrinsics[0, 0]), float(intrinsics[1, 1])
+    cx, cy = float(intrinsics[0, 2]), float(intrinsics[1, 2])
 
+    # depth_map boyutuna göre mask ve conf'u yeniden boyutlandır
     if car_mask.shape != (h, w):
         car_mask = cv2.resize(car_mask, (w, h), interpolation=cv2.INTER_NEAREST)
 
     u, v = np.meshgrid(np.arange(w), np.arange(h))
     valid = car_mask > 0
 
+    # conf filtresi — DA3 conf 1.0-10.0 arası, düşük = kenar/gürültü
     if conf_map is not None:
         if conf_map.shape != (h, w):
             conf_map = cv2.resize(conf_map.astype(np.float32), (w, h))
-        valid = valid & (conf_map > conf_thresh)
+        valid = valid & (conf_map >= conf_thresh)
+
+    # Çok yakın veya çok uzak derinlikleri filtrele
+    valid = valid & (depth_map > 0.2) & (depth_map < 15.0)
 
     u = u[valid]; v = v[valid]
     d = depth_map[valid]
@@ -230,30 +162,44 @@ def depth_to_point_cloud(depth_map, rgb_image, intrinsics, extrinsics, car_mask,
     y = (v - cy) * d / fy
     z = d
     points_cam = np.stack([x, y, z], axis=-1)
-    R = extrinsics[:3, :3]
-    t = extrinsics[:3, 3]
-    points_world = (points_cam - t) @ np.linalg.inv(R).T
+
+    # DA3 extrinsics: (3, 4) world-to-camera [R | t]
+    R = extrinsics_34[:3, :3]
+    t = extrinsics_34[:3, 3]
+    # Camera-to-world: X_world = R^T * X_cam - R^T * t
+    points_world = points_cam @ R.T - t @ R.T
+
     colors = rgb.astype(np.float32) / 255.0
     return points_world, colors
 
 # ----------------------------
 # MERGE POINT CLOUD
 # ----------------------------
-def merge_point_clouds(prediction, mask_files, conf_thresh=0.5):
+def merge_point_clouds(prediction, mask_files, conf_thresh=2.0, voxel_size=0.005):
     all_points = []
     all_colors = []
-    for i in range(len(prediction.depth)):
+
+    n = prediction.depth.shape[0]
+    for i in range(n):
         mask_img = cv2.imread(mask_files[i], cv2.IMREAD_GRAYSCALE)
         car_mask = (mask_img > 127).astype(np.uint8)
+
+        depth_i = prediction.depth[i]
+        image_i = prediction.processed_images[i]
+        intr_i  = prediction.intrinsics[i]
+        extr_i  = prediction.extrinsics[i]
+        conf_i  = prediction.conf[i]
+
+        # processed_images boyutu depth ile eşleşmeyebilir, yeniden boyutlandır
+        h, w = depth_i.shape
+        if image_i.shape[:2] != (h, w):
+            image_i = cv2.resize(image_i, (w, h))
+
         points, colors = depth_to_point_cloud(
-            prediction.depth[i],
-            prediction.processed_images[i],
-            prediction.intrinsics[i],
-            prediction.extrinsics[i],
-            car_mask,
-            prediction.conf[i],
-            conf_thresh
+            depth_i, image_i, intr_i, extr_i,
+            car_mask, conf_i, conf_thresh
         )
+
         if len(points) > 0:
             all_points.append(points)
             all_colors.append(colors)
@@ -262,7 +208,18 @@ def merge_point_clouds(prediction, mask_files, conf_thresh=0.5):
     if not all_points:
         return np.zeros((0, 3)), np.zeros((0, 3))
 
-    return np.vstack(all_points), np.vstack(all_colors)
+    merged = np.vstack(all_points)
+    merged_colors = np.vstack(all_colors)
+    print(f"Toplam (ham): {len(merged)} nokta")
+
+    # Voxel downsampling — 5mm hassasiyet
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(merged)
+    pcd.colors = o3d.utility.Vector3dVector(merged_colors)
+    pcd = pcd.voxel_down_sample(voxel_size=voxel_size)
+    print(f"Toplam (downsampled, voxel={voxel_size}): {len(pcd.points)} nokta")
+
+    return np.asarray(pcd.points), np.asarray(pcd.colors)
 
 # ----------------------------
 # CLEAN POINT CLOUD
@@ -273,15 +230,17 @@ def clean_point_cloud_open3d(points_3d, colors_3d):
     pcd.points = o3d.utility.Vector3dVector(points_3d)
     pcd.colors = o3d.utility.Vector3dVector(colors_3d if colors_3d.max() <= 1.0 else colors_3d / 255.0)
 
-    pcd, ind = pcd.remove_statistical_outlier(nb_neighbors=50, std_ratio=5.0)
+    pcd, ind = pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
     pcd = pcd.select_by_index(ind)
     print(f"  Statistical sonrası: {len(pcd.points)}")
 
     pts = np.asarray(pcd.points)
-    cx, cy, cz = np.median(pts[:, 0]), np.median(pts[:, 1]), np.median(pts[:, 2])
+    cx = np.median(pts[:, 0])
+    cy = np.median(pts[:, 1])
+    cz = np.median(pts[:, 2])
     bbox = o3d.geometry.AxisAlignedBoundingBox(
-        min_bound=(cx - 1.2, cy - 0.8, cz - 0.5),
-        max_bound=(cx + 1.2, cy + 0.8, cz + 2.0)
+        min_bound=(cx - 3.0, cy - 2.0, cz - 2.0),
+        max_bound=(cx + 3.0, cy + 2.0, cz + 2.0)
     )
     pcd = pcd.crop(bbox)
     print(f"  Bbox sonrası: {len(pcd.points)}")
@@ -305,14 +264,14 @@ def create_mesh(points, colors):
     pcd.points = o3d.utility.Vector3dVector(points)
     pcd.colors = o3d.utility.Vector3dVector(colors if colors.max() <= 1.0 else colors / 255.0)
 
-    pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+    pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.05, max_nn=30))
     pcd.orient_normals_consistent_tangent_plane(10)
 
-    print("-> Yüzey örülüyor (Poisson)...")
-    mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=9)
+    print("-> Yüzey örülüyor (Poisson depth=11)...")
+    mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=11)
 
     densities = np.asarray(densities)
-    mesh.remove_vertices_by_mask(densities < np.quantile(densities, 0.02))
+    mesh.remove_vertices_by_mask(densities < np.quantile(densities, 0.05))
     mesh.remove_degenerate_triangles()
     mesh.remove_duplicated_triangles()
     mesh.remove_duplicated_vertices()
@@ -343,11 +302,15 @@ def generate_3d_model(input_dir, output_dir, sam_predictor, da3_model):
     print("\n=== Maskeler oluşturuluyor ===")
     mask_files = generate_masks(image_files, masks_path, sam_predictor)
 
-    print("\n=== DA V2 Derinlik çıkarımı yapılıyor ===")
+    print("\n=== DA3 çıkarımı yapılıyor ===")
     prediction = run_da3_inference(model, device, image_files)
 
     print("\n=== Point cloud birleştiriliyor ===")
-    points_3d, colors_3d = merge_point_clouds(prediction, mask_files, conf_thresh=0.5)
+    points_3d, colors_3d = merge_point_clouds(
+        prediction, mask_files,
+        conf_thresh=2.0,   # DA3 conf 1-10 arası, 2.0 iyi denge
+        voxel_size=0.005   # 5mm hassasiyet
+    )
 
     if len(points_3d) == 0:
         print("Nokta bulunamadı, çıkılıyor.")
@@ -357,6 +320,7 @@ def generate_3d_model(input_dir, output_dir, sam_predictor, da3_model):
     pcd_raw.points = o3d.utility.Vector3dVector(points_3d)
     pcd_raw.colors = o3d.utility.Vector3dVector(colors_3d)
     o3d.io.write_point_cloud(os.path.join(output_dir, "ham.ply"), pcd_raw)
+    print(f"ham.ply kaydedildi: {len(points_3d)} nokta")
 
     print("\n=== Temizleniyor ===")
     try:
@@ -369,6 +333,7 @@ def generate_3d_model(input_dir, output_dir, sam_predictor, da3_model):
     pcd_clean.points = o3d.utility.Vector3dVector(clean_pts)
     pcd_clean.colors = o3d.utility.Vector3dVector(clean_cols)
     o3d.io.write_point_cloud(os.path.join(output_dir, "temiz.ply"), pcd_clean)
+    print(f"temiz.ply kaydedildi: {len(clean_pts)} nokta")
 
     mesh = create_mesh(clean_pts, clean_cols)
 
@@ -396,7 +361,7 @@ if __name__ == "__main__":
     paths = setup_paths()
     print("Paths hazır.")
 
-    print("\n=== DA V2 modeli yükleniyor ===")
+    print("\n=== DA3 modeli yükleniyor ===")
     da3_model, device = load_da3_model()
 
     print("\n=== SAM modeli yükleniyor ===")

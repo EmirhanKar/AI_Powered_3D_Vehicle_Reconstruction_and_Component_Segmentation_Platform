@@ -12,7 +12,7 @@ from config import IMAGES_DIR, OUTPUT_DIR, JANT_DIR, YOLO_MODEL_PATH
 # BACKEND AYARLARI
 # ----------------------------
 
-BACKEND_URL = "http://192.168.1.192:8000"
+BACKEND_URL = "http://192.168.1.191:8000"
 ADMIN_KEY   = "ABCDEFGHIJKLMNOPRSTUVYZ123"
 
 # ----------------------------

@@ -11,7 +11,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("modifai_servis")
 
-BACKEND_URL = "http://192.168.1.192:8000"
+BACKEND_URL = "http://192.168.1.191:8000"
 ADMIN_KEY   = "ABCDEFGHIJKLMNOPRSTUVYZ123"
 BEKLEME_SN  = 5
 
