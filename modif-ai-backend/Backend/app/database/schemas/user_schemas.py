@@ -28,6 +28,8 @@ class UserResponse(UserBase):
     user_credi: int = 0
     create_image: int = 0
     render_image: int = 0
+    game_score_car_racing: int = 0
+    game_score_fly_bird: int = 0
 
     class Config:
         from_attributes = True

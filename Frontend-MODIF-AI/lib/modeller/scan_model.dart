@@ -1,13 +1,15 @@
 class Modification {
   final String? jantName;
   final String? colorCode;
+  final String? paintLocation;
   
-  Modification({this.jantName, this.colorCode});
+  Modification({this.jantName, this.colorCode, this.paintLocation});
   
   factory Modification.fromJson(Map<String, dynamic> json) {
     return Modification(
       jantName: json['jant']?['model_name'],
       colorCode: json['colors']?['color_code'],
+      paintLocation: json['paint_location'],
     );
   }
 }

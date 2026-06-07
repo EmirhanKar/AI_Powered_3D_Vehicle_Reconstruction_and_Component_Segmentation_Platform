@@ -9,4 +9,4 @@ from app.database.models.modificationTable.processed_3D import Processed3D
 from app.database.models.userTable.comment_model import Comment
 from app.database.models.pluginsTable.colors import Colors
 from app.database.models.modificationTable.processed_2D import Processed2D
-from app.database.models.userTable.like_model import Like
+from app.database.models.userTable.like_model import Like, CommentLike

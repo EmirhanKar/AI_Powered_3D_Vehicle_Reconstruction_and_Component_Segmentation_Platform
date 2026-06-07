@@ -25,11 +25,13 @@ class ModificationCreate(BaseModel):
     scan_id: int
     jant_id: Optional[int] = None
     color_id: Optional[int] = None
+    paint_location: Optional[str] = None  # Boya yeri
 
 
 class ModificationUpdate(BaseModel):
     jant_id: Optional[int] = None
     color_id: Optional[int] = None
+    paint_location: Optional[str] = None  # Boya yeri
 
 
 class ModificationResponse(BaseModel):
@@ -38,6 +40,7 @@ class ModificationResponse(BaseModel):
     user_id: int
     jant_id: Optional[int] = None
     color_id: Optional[int] = None
+    paint_location: Optional[str] = None
     last_step: str
 
     class Config:
@@ -112,6 +115,7 @@ async def create_modification(
     if existing_mod:
         existing_mod.jant_id = mod_in.jant_id
         existing_mod.color_id = mod_in.color_id
+        existing_mod.paint_location = mod_in.paint_location
         existing_mod.last_step = "plugin_selected"
         new_mod = existing_mod
     else:
@@ -120,6 +124,7 @@ async def create_modification(
             user_id=current_user.user_id,
             jant_id=mod_in.jant_id,
             color_id=mod_in.color_id,
+            paint_location=mod_in.paint_location,
             last_step="plugin_selected"
         )
         db.add(new_mod)
@@ -160,6 +165,9 @@ async def update_modification(
         if not color:
             raise HTTPException(status_code=404, detail="Renk bulunamadı.")
         mod.color_id = mod_in.color_id
+
+    if mod_in.paint_location is not None:
+        mod.paint_location = mod_in.paint_location
 
     await db.commit()
     await db.refresh(mod)

@@ -34,6 +34,7 @@ class ColorBrief(BaseModel):
 class ModificationBrief(BaseModel):
     jant: Optional[JantBrief] = None
     colors: Optional[ColorBrief] = None
+    paint_location: Optional[str] = None
     class Config:
         from_attributes = True
 

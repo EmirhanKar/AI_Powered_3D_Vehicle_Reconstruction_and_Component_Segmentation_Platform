@@ -7,9 +7,16 @@ import 'servisler/api_servisi.dart';
 
 class SekmeKesfet extends StatefulWidget {
   final bool isGuest;
-  static final GlobalKey likeKey = GlobalKey();
-  static final GlobalKey commentKey = GlobalKey();
-  const SekmeKesfet({super.key, this.isGuest = false});
+  final int? currentUserId;
+  final GlobalKey likeKey;
+  final GlobalKey commentKey;
+  const SekmeKesfet({
+    super.key,
+    this.isGuest = false,
+    this.currentUserId,
+    required this.likeKey,
+    required this.commentKey,
+  });
   @override
   State<SekmeKesfet> createState() => _SekmeKesfetState();
 }
@@ -27,7 +34,8 @@ class _SekmeKesfetState extends State<SekmeKesfet> {
 
   void _alevTikla(FeedItem item) async {
     if (widget.isGuest) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bunun için giriş yapmalısınız!')));
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('registration_required'))));
       return;
     }
     if (titresimAcik.value) HapticFeedback.selectionClick();
@@ -49,11 +57,15 @@ class _SekmeKesfetState extends State<SekmeKesfet> {
 
   void _yorumSayfasiAc(FeedItem item) {
     if (widget.isGuest) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bunun için giriş yapmalısınız!')));
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('registration_required'))));
       return;
     }
     if (titresimAcik.value) HapticFeedback.lightImpact();
-    Navigator.push(context, MaterialPageRoute(builder: (c) => GonderiDetaySayfasi(feedItem: item))).then((_) {
+    Navigator.push(context, MaterialPageRoute(builder: (c) => GonderiDetaySayfasi(
+      feedItem: item,
+      currentUserId: widget.currentUserId,
+    ))).then((_) {
       // Detaydan dönünce feed kartlarını güncelle (yorum/beğeni sayısı değişmiş olabilir)
       if (mounted) setState(() {});
     });
@@ -61,7 +73,8 @@ class _SekmeKesfetState extends State<SekmeKesfet> {
 
   void _toplulugaPaylas() async {
     if (widget.isGuest) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bunun için giriş yapmalısınız!')));
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('registration_required'))));
       return;
     }
     if (titresimAcik.value) HapticFeedback.lightImpact();
@@ -69,39 +82,57 @@ class _SekmeKesfetState extends State<SekmeKesfet> {
       final garaj = await ApiServisi().garajiGetir();
       final tamamlananlar = garaj.where((s) => s.isCompleted).toList();
       if (tamamlananlar.isEmpty) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Paylaşılacak tamamlanmış araç yok.'), backgroundColor: Colors.orange, behavior: SnackBarBehavior.floating));
+        if (mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Paylaşılacak tamamlanmış araç yok.'), backgroundColor: Colors.orange, behavior: SnackBarBehavior.floating));
+        }
         return;
       }
       if (!mounted) return;
       _aracSecDialoguGoster(tamamlananlar);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
+      }
     }
   }
 
   void _aracSecDialoguGoster(List<Scan> araclar) {
-    showModalBottomSheet(context: context, backgroundColor: yuzeyRengi(), shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))), builder: (ctx) {
-      return SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Padding(padding: const EdgeInsets.all(16), child: Text(t('select_car_share'), style: TextStyle(color: yaziRengi(), fontSize: 18, fontWeight: FontWeight.bold))),
-        ...araclar.map((scan) => ListTile(
-          leading: Container(width: 48, height: 48, decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: yuzeyRengi()), child: scan.thumbnailUrl != null ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(ApiServisi.buildImageUrl(scan.thumbnailUrl)!, fit: BoxFit.cover)) : const Icon(Icons.directions_car, color: Colors.grey)),
-          title: Text(scan.carName, style: TextStyle(color: yaziRengi(), fontWeight: FontWeight.bold)),
-          subtitle: Text(scan.method == '3d' ? '3D' : '2D', style: TextStyle(color: ikinciYaziRengi())),
-          onTap: () async {
-            Navigator.pop(ctx);
-            try {
-              await ApiServisi().toplulugaPaylas(scan.scanId);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('shared_success')), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
-                setState(() { _feedFuture = ApiServisi().feedGetir(); });
-              }
-            } catch (e) {
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
-            }
-          },
-        )),
-        const SizedBox(height: 20),
-      ]));
+    showModalBottomSheet(context: context, backgroundColor: yuzeyRengi(), shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))), isScrollControlled: true, builder: (ctx) {
+      return SafeArea(child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Padding(padding: const EdgeInsets.all(16), child: Text(t('select_car_share'), style: TextStyle(color: yaziRengi(), fontSize: 18, fontWeight: FontWeight.bold))),
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              children: araclar.map((scan) => ListTile(
+                leading: Container(width: 48, height: 48, decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: yuzeyRengi()), child: scan.thumbnailUrl != null ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(ApiServisi.buildImageUrl(scan.thumbnailUrl)!, fit: BoxFit.cover)) : const Icon(Icons.directions_car, color: Colors.grey)),
+                title: Text(scan.carName, style: TextStyle(color: yaziRengi(), fontWeight: FontWeight.bold)),
+                subtitle: Text(scan.method == '3d' ? '3D' : '2D', style: TextStyle(color: ikinciYaziRengi())),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  try {
+                    await ApiServisi().toplulugaPaylas(scan.scanId);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).clearSnackBars();
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('shared_success')), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+                      setState(() { _feedFuture = ApiServisi().feedGetir(); });
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).clearSnackBars();
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
+                    }
+                  }
+                },
+              )).toList(),
+            ),
+          ),
+          const SizedBox(height: 20),
+        ]),
+      ));
     });
   }
 
@@ -152,9 +183,9 @@ class _SekmeKesfetState extends State<SekmeKesfet> {
                       future: _feedFuture,
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator(color: anaRenk));
-                        if (snapshot.hasError) return Center(child: Text("Bağlantı hatası", style: TextStyle(color: yaziRengi())));
+                        if (snapshot.hasError) return Center(child: Text(t('connection_error'), style: TextStyle(color: yaziRengi())));
                         final items = snapshot.data ?? [];
-                        if (items.isEmpty) return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.explore_off, color: Colors.grey, size: 48), const SizedBox(height: 12), Text('Henüz paylaşım yok', style: TextStyle(color: ikinciYaziRengi(), fontSize: 16))]));
+                        if (items.isEmpty) return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.explore_off, color: Colors.grey, size: 48), const SizedBox(height: 12), Text(t('no_legends_yet'), style: TextStyle(color: ikinciYaziRengi(), fontSize: 16))]));
                         return GridView.builder(
                           padding: const EdgeInsets.all(16),
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.68),
@@ -219,7 +250,7 @@ class _SekmeKesfetState extends State<SekmeKesfet> {
               Row(children: [
                 // Alev butonu
                 InkWell(
-                  key: index == 0 ? SekmeKesfet.likeKey : null,
+                  key: index == 0 ? widget.likeKey : null,
                   onTap: () => _alevTikla(item),
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
@@ -231,7 +262,7 @@ class _SekmeKesfetState extends State<SekmeKesfet> {
                 const SizedBox(width: 8),
                 // Yorum sayısı
                 Container(
-                  key: index == 0 ? SekmeKesfet.commentKey : null,
+                  key: index == 0 ? widget.commentKey : null,
                   child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.comment_outlined, color: ikinciYaziRengi(), size: 14), const SizedBox(width: 4), Text('${item.commentCount}', style: TextStyle(color: ikinciYaziRengi(), fontSize: 11))]),
                 ),
               ]),
@@ -246,7 +277,8 @@ class _SekmeKesfetState extends State<SekmeKesfet> {
 // ── GÖNDERİ DETAY SAYFASI (Madde 8 — Yorum sistemi) ──
 class GonderiDetaySayfasi extends StatefulWidget {
   final FeedItem feedItem;
-  const GonderiDetaySayfasi({super.key, required this.feedItem});
+  final int? currentUserId;
+  const GonderiDetaySayfasi({super.key, required this.feedItem, this.currentUserId});
   @override
   State<GonderiDetaySayfasi> createState() => _GonderiDetaySayfasiState();
 }
@@ -292,28 +324,45 @@ class _GonderiDetaySayfasiState extends State<GonderiDetaySayfasi> {
         _yorumFuture = ApiServisi().yorumlariGetir(widget.feedItem.scanId);
       });
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
+      }
     } finally {
       if (mounted) setState(() => _gonderiliyor = false);
     }
   }
 
   void _yorumBegeniTikla(Yorum yorum) async {
-    // Madde 2: Sadece 1 kez (zaten beğendiyse geri almaz mantığı isteğe bağlı ama "1 kullanıcı 1 tane atabilsin" denmiş)
-    if (yorum.isLiked) return;
-
     if (titresimAcik.value) HapticFeedback.selectionClick();
+    final wasLiked = yorum.isLiked;
     setState(() {
-      yorum.isLiked = true;
-      yorum.likeCount++;
+      yorum.isLiked = !wasLiked;
+      yorum.likeCount += wasLiked ? -1 : 1;
     });
     try {
       await ApiServisi().yorumBegeniToggle(yorum.commentId);
     } catch (e) {
       setState(() {
-        yorum.isLiked = false;
-        yorum.likeCount--;
+        yorum.isLiked = wasLiked;
+        yorum.likeCount += wasLiked ? 1 : -1;
       });
+    }
+  }
+
+  Future<void> _yorumSil(Yorum yorum) async {
+    if (titresimAcik.value) HapticFeedback.mediumImpact();
+    try {
+      await ApiServisi().yorumSil(yorum.commentId);
+      setState(() {
+        widget.feedItem.commentCount = (widget.feedItem.commentCount - 1).clamp(0, 999999);
+        _yorumFuture = ApiServisi().yorumlariGetir(widget.feedItem.scanId);
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
+      }
     }
   }
 
@@ -412,6 +461,17 @@ class _GonderiDetaySayfasiState extends State<GonderiDetaySayfasi> {
                                           ],
                                         ),
                                       ),
+                                      const Spacer(),
+                                      // Yorum silme butonu (sadece kendi yorumu)
+                                      if (widget.currentUserId != null && yorum.userId == widget.currentUserId)
+                                        InkWell(
+                                          onTap: () => _yorumSil(yorum),
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(4),
+                                            child: Icon(Icons.delete_outline, color: Colors.redAccent.withValues(alpha: 0.7), size: 16),
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 ]),

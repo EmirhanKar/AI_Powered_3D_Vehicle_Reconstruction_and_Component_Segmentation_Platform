@@ -2,12 +2,12 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, desc
 from sqlalchemy.orm import selectinload
 from typing import List
 
 from app.database.db import get_session
-from app.database.models import Scans, User, Like, Comment
+from app.database.models import Scans, User, Like, Comment, CommentLike
 from app.database.models.modificationTable.processed_3D import Processed3D
 from app.database.models.modificationTable.processed_2D import Processed2D
 from app.api import get_current_user
@@ -51,6 +51,70 @@ async def get_feed(
         )
         like_count = like_count_result.scalar()
 
+        # Yorum sayısı
+        comment_count_result = await db.execute(
+            select(func.count()).where(Comment.scan_id == scan.scan_id)
+        )
+        comment_count = comment_count_result.scalar()
+
+        # Giriş yapan kullanıcı beğenmiş mi?
+        liked_result = await db.execute(
+            select(Like).where(
+                Like.scan_id == scan.scan_id,
+                Like.user_id == current_user.user_id
+            )
+        )
+        is_liked = liked_result.scalar_one_or_none() is not None
+
+        # Araç sahibi
+        owner_result = await db.execute(select(User).where(User.user_id == scan.user_id))
+        owner = owner_result.scalar_one_or_none()
+
+        # Thumbnail
+        thumbnail_url = None
+        if scan.processed_3d:
+            thumbnail_url = scan.processed_3d.thumbnail_url
+        elif scan.processed_2d:
+            thumbnail_url = scan.processed_2d.thumbnail_url
+
+        feed.append(FeedItemResponse(
+            scan_id=scan.scan_id,
+            car_name=scan.car_name,
+            thumbnail_url=thumbnail_url,
+            like_count=like_count,
+            comment_count=comment_count,
+            is_liked=is_liked,
+            owner_name=f"{owner.name} {owner.surname}" if owner else "Bilinmiyor"
+        ))
+
+    return feed
+
+
+@router.get("/explore/top", response_model=List[FeedItemResponse], tags=["Community"])
+async def get_top_explore(
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """En çok beğenilen 5 topluluk aracını getirir."""
+    # Sadece is_shared=True olan completed scan'leri getir, beğeni sayısına göre sırala
+    query = (
+        select(Scans, func.count(Like.like_id).label("like_count"))
+        .join(Like, Like.scan_id == Scans.scan_id, isouter=True)
+        .where(Scans.status == "completed")
+        .where(Scans.is_shared == True)
+        .group_by(Scans.scan_id)
+        .order_by(desc("like_count"), Scans.created_at.desc())
+        .limit(5)
+        .options(
+            selectinload(Scans.processed_3d),
+            selectinload(Scans.processed_2d),
+        )
+    )
+    result = await db.execute(query)
+    scans_with_likes = result.all()
+
+    feed = []
+    for scan, like_count in scans_with_likes:
         # Yorum sayısı
         comment_count_result = await db.execute(
             select(func.count()).where(Comment.scan_id == scan.scan_id)
@@ -142,7 +206,38 @@ async def get_comments(
         .where(Comment.scan_id == scan_id)
         .order_by(Comment.created_at.desc())
     )
-    return result.scalars().all()
+    comments = result.scalars().all()
+    
+    response = []
+    for c in comments:
+        user_res = await db.execute(select(User).where(User.user_id == c.user_id))
+        user_obj = user_res.scalar_one_or_none()
+        u_name = f"{user_obj.name} {user_obj.surname}" if user_obj else "Kullanıcı"
+        
+        like_count_res = await db.execute(
+            select(func.count()).where(CommentLike.comment_id == c.comment_id)
+        )
+        like_count = like_count_res.scalar()
+        
+        is_liked_res = await db.execute(
+            select(CommentLike).where(
+                CommentLike.comment_id == c.comment_id,
+                CommentLike.user_id == current_user.user_id
+            )
+        )
+        is_liked = is_liked_res.scalar_one_or_none() is not None
+        
+        response.append(CommentResponse(
+            comment_id=c.comment_id,
+            scan_id=c.scan_id,
+            user_id=c.user_id,
+            content=c.content,
+            created_at=c.created_at,
+            user_name=u_name,
+            like_count=like_count,
+            is_liked=is_liked
+        ))
+    return response
 
 
 @router.post("/{scan_id}/comments", response_model=CommentResponse, status_code=status.HTTP_201_CREATED, tags=["Community"])
@@ -165,7 +260,49 @@ async def add_comment(
     db.add(new_comment)
     await db.commit()
     await db.refresh(new_comment)
-    return new_comment
+    
+    u_name = f"{current_user.name} {current_user.surname}"
+    return CommentResponse(
+        comment_id=new_comment.comment_id,
+        scan_id=new_comment.scan_id,
+        user_id=new_comment.user_id,
+        content=new_comment.content,
+        created_at=new_comment.created_at,
+        user_name=u_name,
+        like_count=0,
+        is_liked=False
+    )
+
+
+@router.post("/comments/{comment_id}/like", status_code=status.HTTP_200_OK, tags=["Community"])
+async def toggle_comment_like(
+    comment_id: int,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Yorumu beğen / beğeniyi geri al. Her çağrıda toggle yapar."""
+    comment = await db.get(Comment, comment_id)
+    if not comment:
+        raise HTTPException(status_code=404, detail="Yorum bulunamadı.")
+
+    result = await db.execute(
+        select(CommentLike).where(
+            CommentLike.comment_id == comment_id,
+            CommentLike.user_id == current_user.user_id
+        )
+    )
+    existing_like = result.scalar_one_or_none()
+
+    if existing_like:
+        await db.delete(existing_like)
+        await db.commit()
+        return {"liked": False, "message": "Yorum beğenisi kaldırıldı."}
+    else:
+        new_like = CommentLike(user_id=current_user.user_id, comment_id=comment_id)
+        db.add(new_like)
+        await db.commit()
+        return {"liked": True, "message": "Yorum beğenildi."}
+
 
 
 @router.delete("/comments/{comment_id}", status_code=status.HTTP_200_OK, tags=["Community"])

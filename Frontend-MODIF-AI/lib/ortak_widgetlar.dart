@@ -66,6 +66,7 @@ void ortadanSecimDialoguGoster(BuildContext context) {
 
 void ortakYakindaToastGoster(BuildContext context) {
   if (titresimAcik.value) HapticFeedback.lightImpact();
+  ScaffoldMessenger.of(context).clearSnackBars();
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Row(
@@ -183,7 +184,7 @@ class ArabaKartiOlusturucu {
                           InkWell(
                             onTap: onGoster,
                             borderRadius: BorderRadius.circular(8),
-                            child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(color: anaRenk, borderRadius: BorderRadius.circular(8)), child: const Text('Göster', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
+                            child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(color: anaRenk, borderRadius: BorderRadius.circular(8)), child: Text(t('show_btn'), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
                           ),
                           const SizedBox(width: 8),
                         ],

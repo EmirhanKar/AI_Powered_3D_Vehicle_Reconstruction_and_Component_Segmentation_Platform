@@ -232,6 +232,25 @@ class ApiServisi {
     }
   }
 
+  Future<Map<String, dynamic>> aracTespitEt(XFile photo) async {
+    final token = await _auth.getToken();
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/scans/detect_car'),
+    );
+    request.headers['Authorization'] = 'Bearer $token';
+    request.files.add(await http.MultipartFile.fromPath('image', photo.path));
+
+    final streamedResponse = await request.send().timeout(const Duration(seconds: 15));
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Araç tespit hatası: ${response.statusCode}');
+    }
+  }
+
   // ═══════════════════════════════════════════════════
   //  EKLENTİLER (PLUGINS)
   // ═══════════════════════════════════════════════════
@@ -282,6 +301,20 @@ class ApiServisi {
       return data.map((e) => FeedItem.fromJson(e)).toList();
     } else {
       throw Exception('Feed getirme hatası: ${response.statusCode}');
+    }
+  }
+
+  Future<List<FeedItem>> exploreTopGetir() async {
+    final headers = await _authHeaders();
+    final response = await http
+        .get(Uri.parse('$baseUrl/community/explore/top'), headers: headers)
+        .timeout(_timeout);
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((e) => FeedItem.fromJson(e)).toList();
+    } else {
+      throw Exception('Top explore getirme hatası: ${response.statusCode}');
     }
   }
 
@@ -342,6 +375,17 @@ class ApiServisi {
     }
   }
 
+  Future<void> yorumSil(int commentId) async {
+    final headers = await _authHeaders();
+    final response = await http
+        .delete(Uri.parse('$baseUrl/community/comments/$commentId'), headers: headers)
+        .timeout(_timeout);
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Yorum silme hatası: ${response.statusCode}');
+    }
+  }
+
 
   // ═══════════════════════════════════════════════════
   //  MAĞAZA (STORE)
@@ -395,11 +439,13 @@ class ApiServisi {
     required int scanId,
     int? jantId,
     int? colorId,
+    String? paintLocation,
   }) async {
     final headers = await _authHeaders(contentType: 'application/json');
     final body = <String, dynamic>{'scan_id': scanId};
     if (jantId != null) body['jant_id'] = jantId;
     if (colorId != null) body['color_id'] = colorId;
+    if (paintLocation != null) body['paint_location'] = paintLocation;
 
     final response = await http
         .post(
@@ -497,11 +543,11 @@ class ApiServisi {
     }
   }
 
-  Future<List<Map<String, dynamic>>> oyunLiderlikTablosuGetir() async {
+  Future<List<Map<String, dynamic>>> oyunLiderlikTablosuGetir(String gameType) async {
     final headers = await _authHeaders();
     try {
       final response = await http
-          .get(Uri.parse('$baseUrl/users/game/leaderboard'), headers: headers)
+          .get(Uri.parse('$baseUrl/users/game/leaderboard?game_type=$gameType'), headers: headers)
           .timeout(_timeout);
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -511,13 +557,13 @@ class ApiServisi {
     return [];
   }
 
-  Future<void> oyunSkoruKaydet(int skor) async {
+  Future<void> oyunSkoruKaydet(int skor, String gameType) async {
     final headers = await _authHeaders(contentType: 'application/json');
     try {
       await http.post(
         Uri.parse('$baseUrl/users/game/score'),
         headers: headers,
-        body: json.encode({'score': skor}),
+        body: json.encode({'score': skor, 'game_type': gameType}),
       ).timeout(_timeout);
     } catch (_) {}
   }

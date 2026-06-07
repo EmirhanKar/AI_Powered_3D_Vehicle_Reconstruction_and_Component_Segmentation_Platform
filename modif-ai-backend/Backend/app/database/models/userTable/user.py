@@ -19,6 +19,10 @@ class User(Base):
     referral_used = Column(Boolean, default=False)
     game_score = Column(Integer, default=0)
     game_score_updated_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
+    game_score_car_racing = Column(Integer, default=0)
+    game_score_car_racing_updated_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
+    game_score_fly_bird = Column(Integer, default=0)
+    game_score_fly_bird_updated_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
     
     likes = relationship("Like", back_populates="user")
     comments = relationship("Comment", back_populates="user")

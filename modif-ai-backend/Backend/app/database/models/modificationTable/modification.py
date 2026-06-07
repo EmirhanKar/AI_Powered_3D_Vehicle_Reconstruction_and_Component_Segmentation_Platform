@@ -14,6 +14,7 @@ class Modification(Base):
     #EKLENTİLER
     color_id = Column(Integer, ForeignKey("colors.color_id"), index=True , nullable=True)
     jant_id = Column(Integer,ForeignKey("jant.jant_id"), index=True)
+    paint_location = Column(String, nullable=True)  # Boya yeri: tum_kaporta, on_tampon, vs.
     
     last_step = Column(String, default="method_selected")
     

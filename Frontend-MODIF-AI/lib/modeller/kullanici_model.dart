@@ -9,6 +9,8 @@ class Kullanici {
   final int userCredi;
   final int createImage;
   final int renderImage;
+  final int gameScoreCarRacing;
+  final int gameScoreFlyBird;
 
   Kullanici({
     required this.userId,
@@ -20,6 +22,8 @@ class Kullanici {
     this.userCredi = 0,
     this.createImage = 0,
     this.renderImage = 0,
+    this.gameScoreCarRacing = 0,
+    this.gameScoreFlyBird = 0,
   });
 
   factory Kullanici.fromJson(Map<String, dynamic> json) {
@@ -34,6 +38,8 @@ class Kullanici {
       userCredi: json['user_credi'] ?? 0,
       createImage: json['create_image'] ?? 0,
       renderImage: json['render_image'] ?? 0,
+      gameScoreCarRacing: json['game_score_car_racing'] ?? 0,
+      gameScoreFlyBird: json['game_score_fly_bird'] ?? 0,
     );
   }
 

@@ -16,11 +16,26 @@ class SekmeAnaSayfa extends StatefulWidget {
   final int kredi;
   final bool isGuest;
   final Widget? headerWidget;
-  static final GlobalKey newProjectKey = GlobalKey();
-  static final GlobalKey statsKey = GlobalKey();
-  static final GlobalKey garageKey = GlobalKey();
-  static final GlobalKey draftsKey = GlobalKey();
-  const SekmeAnaSayfa({super.key, this.kullanici, this.kredi = 0, this.isGuest = false, this.headerWidget});
+  final int refreshTrigger; // AnaSayfa'dan anlık yenileme tetikleyicisi
+
+  final GlobalKey newProjectKey;
+  final GlobalKey statsKey;
+  final GlobalKey garageKey;
+  final GlobalKey draftsKey;
+
+  const SekmeAnaSayfa({
+    super.key,
+    this.kullanici,
+    this.kredi = 0,
+    this.isGuest = false,
+    this.headerWidget,
+    this.refreshTrigger = 0,
+    required this.newProjectKey,
+    required this.statsKey,
+    required this.garageKey,
+    required this.draftsKey,
+  });
+
   @override
   State<SekmeAnaSayfa> createState() => _SekmeAnaSayfaState();
 }
@@ -30,17 +45,91 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
   Future<List<Scan>>? _garajFuture;
   Future<List<Taslak>>? _taslakFuture;
   int _garajSayisi = 0;
+  int _render3dSayisi = 0;
+  int _sharedSayisi = 0;
+  String _enCokBegeniAlanYazi = '-';
 
   @override
   void initState() {
     super.initState();
     if (!widget.isGuest) {
       _garajFuture = ApiServisi().garajiGetir().then((list) {
-        if (mounted) setState(() => _garajSayisi = list.length);
+        if (mounted) {
+          setState(() {
+            _garajSayisi = list.length;
+          });
+        }
         return list;
       });
       _taslakFuture = ApiServisi().taslaklariGetir();
+      _istatistikleriYukle();
     }
+  }
+
+  @override
+  void didUpdateWidget(covariant SekmeAnaSayfa oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // refreshTrigger arttırıldığında (tab 0'a geçince) anlık yenile
+    if (widget.refreshTrigger != oldWidget.refreshTrigger) {
+      yenile();
+    }
+  }
+
+  // İstatistikleri yenile (garaj değişince, paylaşım/beğeni sonrası)
+  // AnaSayfa'dan GlobalKey ile çağrılabilir (public method)
+  void yenile() {
+    if (widget.isGuest) return;
+    setState(() {
+      _garajFuture = ApiServisi().garajiGetir().then((list) {
+        if (mounted) setState(() => _garajSayisi = list.length);
+        return list;
+      });
+    });
+    _istatistikleriYukle();
+  }
+
+  // Eski isimle erişimi koru (internal)
+  void _garajiYenile() => yenile();
+
+  Future<void> _istatistikleriYukle() async {
+    try {
+      final scans = await ApiServisi().garajiGetir();
+      final feed = await ApiServisi().feedGetir();
+      if (!mounted) return;
+
+      int count3d = scans.where((s) => s.method == '3d').length;
+      int countShared = scans.where((s) => s.isShared).length;
+
+      String enCokBegeniAlanArac = '-';
+      int maxLikes = -1;
+
+      for (var scan in scans) {
+        final feedItem = feed.where((f) => f.scanId == scan.scanId).firstOrNull;
+        if (feedItem != null) {
+          if (feedItem.likeCount > maxLikes) {
+            maxLikes = feedItem.likeCount;
+            enCokBegeniAlanArac = scan.carName;
+          }
+        }
+      }
+
+      // Fallback if none have likes but some are shared
+      if (enCokBegeniAlanArac == '-' && countShared > 0) {
+        final firstShared = scans.firstWhere((s) => s.isShared);
+        enCokBegeniAlanArac = firstShared.carName;
+        maxLikes = 0;
+      }
+
+      setState(() {
+        _render3dSayisi = count3d;
+        _sharedSayisi = countShared;
+        if (maxLikes > -1) {
+          _enCokBegeniAlanYazi = '$enCokBegeniAlanArac ($maxLikes)';
+        } else {
+          _enCokBegeniAlanYazi = '-';
+        }
+      });
+    } catch (_) {}
   }
 
   @override
@@ -63,7 +152,7 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
 
   Widget _yeniProjeKartiOlustur(BuildContext context) {
     return Padding(
-      key: SekmeAnaSayfa.newProjectKey,
+      key: widget.newProjectKey,
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
       child: Container(
         height: 280,
@@ -77,7 +166,7 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
               const SizedBox(height: 8),
               Text(t('design_dream'), style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold, height: 1.1)),
               const SizedBox(height: 8),
-              Text(t('ai_step'), style: const TextStyle(color: Colors.blueAccent, fontSize: 12)),
+              Text(t('ai_step'), style: const TextStyle(color: Colors.white70, fontSize: 12)),
               const SizedBox(height: 16),
               ElevatedButton.icon(onPressed: () { if (titresimAcik.value) HapticFeedback.lightImpact(); Navigator.push(context, MaterialPageRoute(builder: (context) => ProjeTipiSecimSayfasi(isGuest: widget.isGuest))); }, icon: Icon(Icons.add_circle, color: anaRenk), label: Text(t('new_project'), style: TextStyle(color: anaRenk, fontWeight: FontWeight.bold)), style: ElevatedButton.styleFrom(backgroundColor: Colors.white, minimumSize: const Size(double.infinity, 48), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))),
             ]),
@@ -88,9 +177,8 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
   }
 
   Widget _istatistikleriOlustur() {
-    final u = widget.kullanici;
     return Padding(
-      key: SekmeAnaSayfa.statsKey,
+      key: widget.statsKey,
       padding: const EdgeInsets.symmetric(vertical: 16.0),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -98,22 +186,76 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
         child: Row(children: [
           _istatistikKartiOlustur(Icons.garage, t('total'), '$_garajSayisi', t('cars_in_garage'), anaRenk),
           const SizedBox(width: 12),
-          _istatistikKartiOlustur(Icons.view_in_ar, 'Render', '${u?.renderImage ?? 0}', t('created'), Colors.purpleAccent),
+          _istatistikKartiOlustur(Icons.view_in_ar, t('stat_3d_render'), '$_render3dSayisi', t('stat_3d_count'), Colors.purpleAccent),
           const SizedBox(width: 12),
-          _istatistikKartiOlustur(Icons.savings, t('credit'), '${widget.kredi}', t('available'), Colors.greenAccent),
+          _istatistikKartiOlustur(Icons.share, t('stat_shared'), '$_sharedSayisi', t('stat_shared_count'), Colors.greenAccent),
+          const SizedBox(width: 12),
+          _istatistikKartiOlustur(Icons.favorite, t('stat_most_liked'), _enCokBegeniAlanYazi, t('stat_most_liked_car'), Colors.redAccent),
         ]),
       ),
     );
   }
 
   Widget _istatistikKartiOlustur(IconData ikon, String baslik, String deger, String altBaslik, Color renk) {
-    return Container(width: 130, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(16), border: Border.all(color: kartBorderRengi())), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [Icon(ikon, color: renk, size: 18), const SizedBox(width: 4), Text(baslik, style: TextStyle(color: renk, fontSize: 12, fontWeight: FontWeight.bold))]), const SizedBox(height: 8), Text(deger, style: premiumNumberStyle.copyWith(color: yaziRengi(), fontSize: 24)), Text(altBaslik, style: TextStyle(color: ikinciYaziRengi(), fontSize: 10))]));
+    final isNumber = double.tryParse(deger) != null;
+    return SizedBox(
+      width: 140,
+      height: 110,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: yuzeyRengi(),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kartBorderRengi()),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(ikon, color: renk, size: 18),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    baslik,
+                    style: TextStyle(color: renk, fontSize: 12, fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  deger,
+                  style: premiumNumberStyle.copyWith(
+                    color: yaziRengi(),
+                    fontSize: isNumber ? 24 : 13,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            Text(
+              altBaslik,
+              style: TextStyle(color: ikinciYaziRengi(), fontSize: 10),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // Madde 7: Garaj kartlarına işlevsel butonlar
   Widget _garajKismiOlustur(BuildContext context) {
     return Padding(
-      key: SekmeAnaSayfa.garageKey,
+      key: widget.garageKey,
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Column(children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -146,7 +288,7 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
                 decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(16)),
                 child: Column(
                   children: [
-                    Text(snapshot.hasError ? "Bağlantı hatası" : t('garage_empty_full'), style: const TextStyle(color: Colors.grey), textAlign: TextAlign.center),
+                    Text(snapshot.hasError ? t('connection_error') : t('garage_empty_full'), style: const TextStyle(color: Colors.grey), textAlign: TextAlign.center),
                     if (!snapshot.hasError) ...[
                       const SizedBox(height: 12),
                       ElevatedButton(
@@ -197,7 +339,7 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
                     await ApiServisi().scanSil(scan.scanId);
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('car_deleted')), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
-                      setState(() { _garajFuture = ApiServisi().garajiGetir(); });
+                      _garajiYenile();
                     }
                   } catch (_) {}
                 }
@@ -211,21 +353,21 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
                     child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(scan.carName, style: TextStyle(color: yaziRengi(), fontSize: 22, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
-                      _detaySatiri('Oluşturulma', _zamanHesapla(scan.createdAt)),
+                      _detaySatiri(t('detail_created'), _zamanHesapla(scan.createdAt)),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Modifiyeler:', style: TextStyle(color: ikinciYaziRengi(), fontSize: 14)),
+                            Text(t('detail_mods'), style: TextStyle(color: ikinciYaziRengi(), fontSize: 14)),
                             const SizedBox(height: 8),
                             if (scan.modifications.isEmpty)
-                              Text('Modifiye yok', style: TextStyle(color: yaziRengi(), fontSize: 14, fontWeight: FontWeight.w600))
+                              Text(t('detail_no_mods'), style: TextStyle(color: yaziRengi(), fontSize: 14, fontWeight: FontWeight.w600))
                             else
                               ...scan.modifications.map((m) {
                                 List<String> details = [];
-                                if (m.jantName != null) details.add('Jant: ${m.jantName}');
-                                if (m.colorCode != null) details.add('Renk: ${m.colorCode}');
+                                if (m.jantName != null) details.add('${t('detail_rim')}: ${m.jantName}');
+                                if (m.colorCode != null) details.add('${t('detail_color')}: ${m.colorCode}');
                                 if (details.isEmpty) return const SizedBox.shrink();
                                 
                                 return Padding(
@@ -253,22 +395,22 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Text(etiket, style: TextStyle(color: ikinciYaziRengi(), fontSize: 14)),
-        Text(deger, style: TextStyle(color: yaziRengi(), fontSize: 14, fontWeight: FontWeight.w600)),
+        Expanded(child: Text(deger, style: TextStyle(color: yaziRengi(), fontSize: 14, fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
       ]),
     );
   }
 
   String _zamanHesapla(DateTime dt) {
     final fark = DateTime.now().difference(dt);
-    if (fark.inMinutes < 60) return '${fark.inMinutes} dk önce';
-    if (fark.inHours < 24) return '${fark.inHours} saat önce';
-    if (fark.inDays < 7) return '${fark.inDays} gün önce';
+    if (fark.inMinutes < 60) return '${fark.inMinutes} ${t('time_min_ago')}';
+    if (fark.inHours < 24) return '${fark.inHours} ${t('time_hour_ago')}';
+    if (fark.inDays < 7) return '${fark.inDays} ${t('time_day_ago')}';
     return '${dt.day}.${dt.month}.${dt.year}';
   }
 
   Widget _taslaklarKismiOlustur() {
     return Padding(
-      key: SekmeAnaSayfa.draftsKey,
+      key: widget.draftsKey,
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,7 +431,7 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(16)),
-                  child: Text('Henüz taslağınız yok.', style: TextStyle(color: ikinciYaziRengi()), textAlign: TextAlign.center),
+                  child: Text(t('no_drafts'), style: TextStyle(color: ikinciYaziRengi()), textAlign: TextAlign.center),
                 );
               }
               return Column(
@@ -316,7 +458,6 @@ class _SekmeAnaSayfaState extends State<SekmeAnaSayfa> {
         const SizedBox(height: 16),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           TextButton.icon(onPressed: () async {
-            // BUG-23 FIX: Silme öncesi onay dialogu
             final onay = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
               backgroundColor: yuzeyRengi(),
               title: Text(t('delete_draft'), style: TextStyle(color: yaziRengi())),
@@ -449,7 +590,7 @@ class _TumGarajSayfasiState extends State<TumGarajSayfasi> {
                                 Text(scan.carName, style: TextStyle(color: yaziRengi(), fontSize: 22, fontWeight: FontWeight.bold)),
                                 const SizedBox(height: 12),
                                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                                  Text('Metod', style: TextStyle(color: ikinciYaziRengi(), fontSize: 14)),
+                                  Text(t('detail_mods'), style: TextStyle(color: ikinciYaziRengi(), fontSize: 14)),
                                   Text(scan.method == '3d' ? '3D Model' : '2D Modifiye', style: TextStyle(color: yaziRengi(), fontSize: 14, fontWeight: FontWeight.w600)),
                                 ]),
                                 const SizedBox(height: 8),

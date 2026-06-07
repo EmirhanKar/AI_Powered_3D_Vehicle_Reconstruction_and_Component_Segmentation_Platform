@@ -27,17 +27,22 @@ class _SekmeMagazaState extends State<SekmeMagaza> {
   }
 
   Future<void> _satinAl(Paket paket) async {
+    if (_satinAlinyor) return;
     if (titresimAcik.value) HapticFeedback.mediumImpact();
     setState(() => _satinAlinyor = true);
     try {
       final sonuc = await ApiServisi().paketSatinAl(paket.packageId);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${sonuc.message} +${sonuc.creditsAdded} kredi. Toplam: ${sonuc.currentCredits}'), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${sonuc.message} +${sonuc.creditsAdded} ${t('credits_total')} ${sonuc.currentCredits}'), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
         // Madde 1: Anlık kredi güncelleme
         widget.onCreditsChanged?.call();
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll("Exception: ", "")), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll("Exception: ", "")), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
+      }
     } finally {
       if (mounted) setState(() => _satinAlinyor = false);
     }
@@ -89,6 +94,7 @@ class _SekmeMagazaState extends State<SekmeMagaza> {
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: 'https://modifai.app/download'));
                     if (mounted) {
+                      ScaffoldMessenger.of(context).clearSnackBars();
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('invite_link_copied')), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
                     }
                   },
@@ -113,7 +119,8 @@ class _SekmeMagazaState extends State<SekmeMagaza> {
       onTap: () async {
         Navigator.pop(ctx);
         if (widget.isGuest) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bunun için kayıt olmanız gerekir!')));
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('registration_required'))));
           return;
         }
         if (titresimAcik.value) HapticFeedback.mediumImpact();
@@ -123,6 +130,7 @@ class _SekmeMagazaState extends State<SekmeMagaza> {
         try {
           await ApiServisi().davetPaylas();
           if (mounted) {
+            ScaffoldMessenger.of(context).clearSnackBars();
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('invite_success')), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
             widget.onCreditsChanged?.call();
           }
@@ -160,11 +168,29 @@ class _SekmeMagazaState extends State<SekmeMagaza> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GlassHeader(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(t('store_title'), style: TextStyle(color: yaziRengi(), fontSize: 28, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text(t('store_desc'), style: TextStyle(color: ikinciYaziRengi(), fontSize: 14)),
-          ])),
+          GlassHeader(
+            child: Row(
+              children: [
+                if (Navigator.maybeOf(context)?.canPop() ?? false) ...[
+                  IconButton(
+                    icon: Icon(Icons.arrow_back, color: yaziRengi()),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(t('store_title'), style: TextStyle(color: yaziRengi(), fontSize: 28, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Text(t('store_desc'), style: TextStyle(color: ikinciYaziRengi(), fontSize: 14)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           Expanded(
             child: widget.isGuest
                 ? _buildGuestView()
@@ -172,6 +198,39 @@ class _SekmeMagazaState extends State<SekmeMagaza> {
                     future: _paketFuture,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator(color: anaRenk));
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+                              const SizedBox(height: 16),
+                              Text(
+                                appLanguage.value == 'tr'
+                                    ? 'Paketler yüklenirken hata oluştu.'
+                                    : 'Failed to load packages.',
+                                style: TextStyle(color: yaziRengi(), fontSize: 14),
+                              ),
+                              const SizedBox(height: 12),
+                              ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _paketFuture = ApiServisi().paketleriGetir();
+                                  });
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: anaRenk,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: Text(
+                                  appLanguage.value == 'tr' ? 'Yeniden Dene' : 'Retry',
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
                       final paketler = snapshot.data ?? [];
                       return SingleChildScrollView(
                         padding: const EdgeInsets.all(24.0),
@@ -216,7 +275,7 @@ class _SekmeMagazaState extends State<SekmeMagaza> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(16)),
-            child: Text('Kredi paketi alabilmek için kayıt olmanız gerekmektedir.', style: TextStyle(color: ikinciYaziRengi(), fontSize: 14), textAlign: TextAlign.center),
+            child: Text(t('registration_required'), style: TextStyle(color: ikinciYaziRengi(), fontSize: 14), textAlign: TextAlign.center),
           ),
           const SizedBox(height: 32),
           // Arkadaşını davet et butonu

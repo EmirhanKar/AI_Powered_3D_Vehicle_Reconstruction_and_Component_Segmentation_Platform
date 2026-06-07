@@ -45,14 +45,14 @@ class _ProjeTipiSecimSayfasiState extends State<ProjeTipiSecimSayfasi> {
         builder: (ctx) => AlertDialog(
           backgroundColor: const Color(0xFF182434),
           title: Text(
-            "Giriş Yap",
+            t('login'),
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
             ),
           ),
-          content: const Text(
-            "Projelerini oluşturmak ve düzenlemek için giriş yapmalısın. Hadi seni kayıt ekranına alalım!",
+          content: Text(
+            t('guest_login_prompt'),
             style: TextStyle(color: Colors.grey),
           ),
           shape: RoundedRectangleBorder(
@@ -61,7 +61,7 @@ class _ProjeTipiSecimSayfasiState extends State<ProjeTipiSecimSayfasi> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text("Kapat", style: TextStyle(color: Colors.grey)),
+              child: Text(t('close'), style: const TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -75,8 +75,8 @@ class _ProjeTipiSecimSayfasiState extends State<ProjeTipiSecimSayfasi> {
                 Navigator.pop(context); // Go back to Home
                 // We assume user can switch to profile tab later.
               },
-              child: const Text(
-                "Anladım",
+              child: Text(
+                t('understood'),
                 style: TextStyle(color: Colors.white),
               ),
             ),
@@ -371,8 +371,8 @@ class _ProjeTipiSecimSayfasiState extends State<ProjeTipiSecimSayfasi> {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  const Text(
-                                    "Modül Bilgisi",
+                                  Text(
+                                    t('module_info'),
                                     style: TextStyle(
                                       color: Colors.black87,
                                       fontSize: 18,
@@ -392,35 +392,35 @@ class _ProjeTipiSecimSayfasiState extends State<ProjeTipiSecimSayfasi> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          const Text(
-                            "🚗 2D Modifiye",
-                            style: TextStyle(
+                          Text(
+                            "🚗 ${t('2d_modify')}",
+                            style: const TextStyle(
                               color: Colors.black87,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
-                            "Aracının sadece dış görünümünü değiştirmek istiyorsan 2D modülü tam sana göre!",
-                            style: TextStyle(
+                          Text(
+                            t('2d_info_desc'),
+                            style: const TextStyle(
                               color: Colors.black54,
                               fontSize: 14,
                             ),
                           ),
                           const SizedBox(height: 16),
-                          const Text(
-                            "🏎️ 3D Modifiye",
-                            style: TextStyle(
+                          Text(
+                            "🏎️ ${t('3d_model')}",
+                            style: const TextStyle(
                               color: Colors.black87,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
-                            "Aracını baştan aşağı detaylıca şekillendirmek ve 3 boyutlu ortamda incelemek istersen bu modülü seç!",
-                            style: TextStyle(
+                          Text(
+                            t('3d_info_desc'),
+                            style: const TextStyle(
                               color: Colors.black54,
                               fontSize: 14,
                             ),
@@ -440,8 +440,8 @@ class _ProjeTipiSecimSayfasiState extends State<ProjeTipiSecimSayfasi> {
                                   color: Colors.blueAccent,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Text(
-                                  "Anladım",
+                                child: Text(
+                                  t('understood'),
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 12,
@@ -479,16 +479,16 @@ class _FotografYuklemeSayfasiState extends State<FotografYuklemeSayfasi> {
   ImageSource? _secilenKaynak;
 
   List<String> get _acilar => widget.method == '2d'
-      ? ['Araç']
+      ? [t('angle_car')]
       : [
-          'Ön',
-          'Sağ Yan',
-          'Sol Yan',
-          'Arka',
-          'Ön Sağ',
-          'Ön Sol',
-          'Arka Sağ',
-          'Arka Sol',
+          t('angle_front'),
+          t('angle_right'),
+          t('angle_left'),
+          t('angle_rear'),
+          t('angle_front_right'),
+          t('angle_front_left'),
+          t('angle_rear_right'),
+          t('angle_rear_left'),
         ];
 
   int get _gerekliSayi => widget.method == '2d' ? 1 : 8;
@@ -574,7 +574,7 @@ class _FotografYuklemeSayfasiState extends State<FotografYuklemeSayfasi> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Lütfen $_gerekliSayi fotoğraf yükleyin! (${_seciliResimler.length}/$_gerekliSayi)',
+            '${t('upload_photos_required')} (${_seciliResimler.length}/$_gerekliSayi)',
           ),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
@@ -584,8 +584,8 @@ class _FotografYuklemeSayfasiState extends State<FotografYuklemeSayfasi> {
     }
     if (_carNameCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Araç adını girin!'),
+        SnackBar(
+          content: Text(t('enter_car_name')),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
         ),
@@ -691,7 +691,7 @@ class _FotografYuklemeSayfasiState extends State<FotografYuklemeSayfasi> {
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: koyuYuzey,
-                  hintText: 'Araç Adı (ör: BMW M3 2024)',
+                  hintText: t('car_name_hint'),
                   hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
                   prefixIcon: const Icon(
                     Icons.directions_car,
@@ -709,7 +709,7 @@ class _FotografYuklemeSayfasiState extends State<FotografYuklemeSayfasi> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '${_seciliResimler.length}/$_gerekliSayi fotoğraf seçildi',
+                    '${_seciliResimler.length}/$_gerekliSayi ${t('photos_selected')}',
                     style: TextStyle(
                       color: _seciliResimler.length == _gerekliSayi
                           ? Colors.greenAccent
@@ -908,12 +908,56 @@ class ModifiyeSecimSayfasi extends StatefulWidget {
 class _ModifiyeSecimSayfasiState extends State<ModifiyeSecimSayfasi> {
   int _seciliRenkIndex = -1;
   int _seciliJantIndex = -1;
+  String? _seciliKaplamaBolgesi; // Boya yeri seçimi
   bool _isYukleniyor = false;
   List<JantModel> _jantlar = [];
   List<RenkModel> _renkler = [];
   bool _pluginsYukleniyor = true;
   String? _seciliKategori; // null = Tümü
   int? _olusturulanScanId;
+
+  // Hex koduna göre Türkçe renk ismi döner
+  static const Map<String, String> _renkIsimleri = {
+    '#F5F5F5': 'Beyaz Sedef',
+    '#1C1C1C': 'Siyah',
+    '#C0C0C0': 'Gümüş Metalik',
+    '#4A4A4A': 'Koyu Gri',
+    '#A8A8A8': 'Açık Gri',
+    '#CC0000': 'Kırmızı',
+    '#800020': 'Bordo',
+    '#E85D04': 'Turuncu',
+    '#F5C518': 'Sarı',
+    '#8D8D8D': 'Nardo Gri',
+    '#003399': 'Koyu Mavi',
+    '#4A90D9': 'Açık Mavi',
+    '#1B2A4A': 'Gece Mavisi',
+    '#2D6A4F': 'Yeşil',
+    '#5F6B3C': 'Haki Yeşil',
+    '#8C6239': 'Bronz',
+    '#6B4226': 'Kahverengi',
+    '#C9A84C': 'Altın Sarısı',
+    '#5B2C8D': 'Mor',
+    '#2C2C2C': 'Mat Siyah',
+  };
+
+  String _renkIsminiGetir(String colorCode) {
+    final upper = colorCode.toUpperCase();
+    // Önce tam eşleşme dene
+    for (final entry in _renkIsimleri.entries) {
+      if (entry.key.toUpperCase() == upper) return entry.value;
+    }
+    return colorCode; // bulamazsa hex kodu döner
+  }
+
+  // Boya yeri seçenekleri
+  static const List<Map<String, String>> _boyaBolgeleri = [
+    {'key': 'tum_kaporta', 'label': 'Tüm Kaporta', 'icon': '🚗'},
+    {'key': 'on_tampon', 'label': 'Ön Tampon', 'icon': '⬛'},
+    {'key': 'arka_tampon', 'label': 'Arka Tampon', 'icon': '⬛'},
+    {'key': 'tavan', 'label': 'Tavan', 'icon': '🔲'},
+    {'key': 'kaput', 'label': 'Kaput', 'icon': '🔳'},
+    {'key': 'kapilar', 'label': 'Kapılar', 'icon': '🚪'},
+  ];
 
   @override
   void initState() {
@@ -1073,6 +1117,7 @@ class _ModifiyeSecimSayfasiState extends State<ModifiyeSecimSayfasi> {
             scanId: currentScanId,
             jantId: jantId,
             colorId: colorId,
+            paintLocation: colorId != null ? _seciliKaplamaBolgesi : null,
           );
           debugPrint('✅ Modifikasyon oluşturuldu');
         }
@@ -1271,7 +1316,7 @@ class _ModifiyeSecimSayfasiState extends State<ModifiyeSecimSayfasi> {
                             ),
                           ),
                           const SizedBox(height: 28),
-                          // ── BOYA SEÇENEKLERİ (Geliştirme Aşamasında) ──
+                          // ── BOYA SEÇENEKLERİ ──
                           Row(
                             children: [
                               Icon(Icons.palette, color: anaRenk, size: 20),
@@ -1284,62 +1329,173 @@ class _ModifiyeSecimSayfasiState extends State<ModifiyeSecimSayfasi> {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                            decoration: BoxDecoration(
-                              color: koyuYuzey,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.amber.withValues(alpha: 0.15)),
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Colors.amber.withValues(alpha: 0.05),
-                                  koyuYuzey,
-                                ],
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.amber.withValues(alpha: 0.1),
-                                    shape: BoxShape.circle,
+                              if (_seciliRenkIndex >= 0 && _seciliRenkIndex < _renkler.length) ...[
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Color(_renkler[_seciliRenkIndex].colorValue).withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: Color(_renkler[_seciliRenkIndex].colorValue).withValues(alpha: 0.5),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      _renkIsminiGetir(_renkler[_seciliRenkIndex].colorCode),
+                                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                  child: Icon(Icons.construction, color: Colors.amber.withValues(alpha: 0.8), size: 22),
                                 ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        '🎨 Geliştirme Aşamasında',
-                                        style: TextStyle(
-                                          color: Colors.amber,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Boya renk seçenekleri yakında eklenecektir.',
-                                        style: TextStyle(
-                                          color: Colors.white.withValues(alpha: 0.5),
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
+                                const Spacer(),
+                                GestureDetector(
+                                  onTap: () {
+                                    if (titresimAcik.value) HapticFeedback.selectionClick();
+                                    setState(() {
+                                      _seciliRenkIndex = -1;
+                                      _seciliKaplamaBolgesi = null;
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.redAccent.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Text('✕ Temizle', style: TextStyle(color: Colors.redAccent, fontSize: 11)),
                                   ),
                                 ),
                               ],
-                            ),
+                            ],
                           ),
+                          const SizedBox(height: 12),
+                          // Renk paleti — grid layout
+                          _renkler.isEmpty
+                              ? Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: koyuYuzey,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                                  ),
+                                  child: const Center(child: Text('Henüz renk eklenmemiş', style: TextStyle(color: Colors.grey))),
+                                )
+                              : Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: koyuYuzey,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                                  ),
+                                  child: Wrap(
+                                    spacing: 12,
+                                    runSpacing: 12,
+                                    children: List.generate(_renkler.length, (i) {
+                                      final renk = _renkler[i];
+                                      final secili = _seciliRenkIndex == i;
+                                      final renkRengi = Color(renk.colorValue);
+                                      return Tooltip(
+                                        message: _renkIsminiGetir(renk.colorCode),
+                                        preferBelow: true,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF182434),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        textStyle: const TextStyle(color: Colors.white, fontSize: 12),
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            if (titresimAcik.value) HapticFeedback.selectionClick();
+                                            setState(() => _seciliRenkIndex = secili ? -1 : i);
+                                          },
+                                          child: AnimatedContainer(
+                                            duration: const Duration(milliseconds: 200),
+                                            width: 44,
+                                            height: 44,
+                                            decoration: BoxDecoration(
+                                              color: renkRengi,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: secili ? Colors.white : Colors.white.withValues(alpha: 0.15),
+                                                width: secili ? 3 : 1,
+                                              ),
+                                              boxShadow: secili
+                                                  ? [
+                                                      BoxShadow(
+                                                        color: renkRengi.withValues(alpha: 0.6),
+                                                        blurRadius: 10,
+                                                        spreadRadius: 3,
+                                                      ),
+                                                    ]
+                                                  : [
+                                                      BoxShadow(
+                                                        color: Colors.black.withValues(alpha: 0.3),
+                                                        blurRadius: 4,
+                                                        offset: const Offset(0, 2),
+                                                      ),
+                                                    ],
+                                            ),
+                                            child: secili
+                                                ? Icon(
+                                                    Icons.check,
+                                                    color: renk.colorValue > 0xFF888888 ? Colors.black87 : Colors.white,
+                                                    size: 20,
+                                                  )
+                                                : null,
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                  ),
+                                ),
+                          // Boya yeri seçimi (sadece renk seçildiyse göster)
+                          if (_seciliRenkIndex >= 0 && _seciliRenkIndex < _renkler.length) ...[
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Icon(Icons.location_on, color: Colors.orangeAccent, size: 16),
+                                const SizedBox(width: 6),
+                                const Text(
+                                  'Boya Yeri',
+                                  style: TextStyle(color: Colors.orangeAccent, fontSize: 14, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _boyaBolgeleri.map((bolge) {
+                                final secili = _seciliKaplamaBolgesi == bolge['key'];
+                                return GestureDetector(
+                                  onTap: () {
+                                    if (titresimAcik.value) HapticFeedback.selectionClick();
+                                    setState(() => _seciliKaplamaBolgesi = secili ? null : bolge['key']);
+                                  },
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: secili ? Colors.orangeAccent.withValues(alpha: 0.15) : koyuYuzey,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: secili ? Colors.orangeAccent : Colors.white.withValues(alpha: 0.1),
+                                        width: secili ? 1.5 : 1,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      '${bolge['icon']} ${bolge['label']}',
+                                      style: TextStyle(
+                                        color: secili ? Colors.orangeAccent : Colors.grey,
+                                        fontSize: 12,
+                                        fontWeight: secili ? FontWeight.bold : FontWeight.normal,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
                           const SizedBox(height: 28),
                           // ── JANT SEÇENEKLERİ (Kategori Sekmeli) ──
                           Row(
@@ -1641,7 +1797,7 @@ class _ModifiyeSecimSayfasiState extends State<ModifiyeSecimSayfasi> {
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(
-                          builder: (c) => const AnaSayfa(initialIndex: 2),
+                          builder: (c) => const AnaSayfa(initialIndex: 0),
                         ),
                         (r) => false,
                       );

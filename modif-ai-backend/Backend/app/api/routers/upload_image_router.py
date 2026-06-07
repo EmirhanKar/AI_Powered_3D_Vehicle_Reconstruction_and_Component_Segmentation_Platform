@@ -12,6 +12,7 @@ from PIL import Image
 import os
 import uuid
 from app.api import get_current_user
+from app.services.car_detection import detect_car as run_car_detection
 
 router = APIRouter(prefix="/scans")
 
@@ -376,3 +377,37 @@ async def delete_scan(
     await db.commit()
 
     return {"message": f"{scan_id} numaralı tarama silindi."}
+
+
+@router.post("/detect_car", status_code=status.HTTP_200_OK)
+async def detect_car_endpoint(
+    image: UploadFile = File(...),
+    current_user=Depends(get_current_user)
+):
+    """
+    Gelen görselde araç olup olmadığını CNN modeli ile kontrol eder.
+    """
+    content_type = image.content_type or ""
+    filename = image.filename or ""
+    ext = filename.lower().split(".")[-1] if "." in filename else ""
+
+    gecerli_mi = (
+        content_type in ALLOWED_CONTENT_TYPES or
+        ext in {"jpg", "jpeg", "png", "webp", "heic", "heif"}
+    )
+
+    if not gecerli_mi:
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{filename}' desteklenmiyor. JPEG, PNG, WEBP, HEIC kabul edilir."
+        )
+
+    try:
+        content = await image.read()
+        result = run_car_detection(content)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Araç tespiti sırasında hata oluştu: {str(e)}"
+        )

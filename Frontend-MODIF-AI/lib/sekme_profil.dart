@@ -517,7 +517,7 @@ Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
                   ElevatedButton.icon(
                     onPressed: () { yumusakGecisYap(context, const GirisSayfasi()); },
                     icon: const Icon(Icons.login, color: Colors.white),
-                    label: const Text('Giriş Yap / Kayıt Ol', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    label: Text(t('login_signup'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
                   ),
                   const SizedBox(height: 100),
@@ -545,8 +545,40 @@ Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
                 const SizedBox(height: 24),
                 // Çıkış ve hesap silme
                 _ayarButonu(t('logout'), Icons.logout, () async {
-                  await AuthServisi().logout();
-                  if (mounted) yumusakGecisYap(context, const GirisSayfasi(), eskiSayfayiKapat: true);
+                  final onay = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      backgroundColor: yuzeyRengi(),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      title: Text(t('logout'), style: TextStyle(color: yaziRengi(), fontWeight: FontWeight.bold)),
+                      content: Text(
+                        appLanguage.value == 'tr'
+                            ? 'Hesabınızdan çıkmak istediğinize emin misiniz?'
+                            : 'Are you sure you want to log out?',
+                        style: TextStyle(color: yaziRengi()),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: Text(
+                            appLanguage.value == 'tr' ? 'İptal' : 'Cancel',
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: Text(
+                            appLanguage.value == 'tr' ? 'Çıkış Yap' : 'Log Out',
+                            style: const TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (onay == true) {
+                    await AuthServisi().logout();
+                    if (mounted) yumusakGecisYap(context, const GirisSayfasi(), eskiSayfayiKapat: true);
+                  }
                 }, renk: Colors.orangeAccent),
                 _ayarButonu(t('delete_account'), Icons.delete_forever, _hesapSilDialoguGoster, renk: Colors.redAccent),
                 const SizedBox(height: 100),
@@ -568,7 +600,7 @@ Gizlilik politikamızla ilgili sorularınız için: modifai.destek@gmail.com''';
           decoration: BoxDecoration(color: yuzeyRengi(), borderRadius: BorderRadius.circular(12), border: Border.all(color: kartBorderRengi())),
           child: Row(
             children: [
-              Expanded(child: Text('Titreşim', style: TextStyle(color: yaziRengi(), fontSize: 14, fontWeight: FontWeight.w500))),
+              Expanded(child: Text(t('vibration'), style: TextStyle(color: yaziRengi(), fontSize: 14, fontWeight: FontWeight.w500))),
               Switch(
                 value: isAcik,
                 activeColor: Colors.blueAccent,

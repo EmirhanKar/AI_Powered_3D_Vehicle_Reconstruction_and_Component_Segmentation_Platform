@@ -132,6 +132,7 @@ class _GirisSayfasiState extends State<GirisSayfasi> {
     String email = kullaniciAdiGirdisi.text.trim();
     String sifre = sifreGirdisi.text.trim();
     if (email.isEmpty || sifre.isEmpty) {
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(t('Lütfen tüm alanları doldurun!')),
@@ -149,7 +150,8 @@ class _GirisSayfasiState extends State<GirisSayfasi> {
       if (mounted)
         yumusakGecisYap(context, const AnaSayfa(), eskiSayfayiKapat: true);
     } catch (hata) {
-      if (mounted)
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(hata.toString().replaceAll("Exception: ", "")),
@@ -157,6 +159,7 @@ class _GirisSayfasiState extends State<GirisSayfasi> {
             behavior: SnackBarBehavior.floating,
           ),
         );
+      }
     } finally {
       if (mounted)
         setState(() {
@@ -375,9 +378,10 @@ class _KayitSayfasiState extends State<KayitSayfasi> {
         _soyadCtrl.text.trim().isEmpty ||
         _emailCtrl.text.trim().isEmpty ||
         _sifreCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Lütfen tüm alanları doldurun!'),
+        SnackBar(
+          content: Text(t('signup_fill_all')),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
         ),
@@ -385,9 +389,10 @@ class _KayitSayfasiState extends State<KayitSayfasi> {
       return;
     }
     if (_sifreCtrl.text.trim().length < 8) {
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Şifre en az 8 karakter olmalı!'),
+        SnackBar(
+          content: Text(t('signup_password_min')),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
         ),
@@ -409,7 +414,8 @@ class _KayitSayfasiState extends State<KayitSayfasi> {
       if (mounted)
         yumusakGecisYap(context, const AnaSayfa(), eskiSayfayiKapat: true);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString().replaceAll("Exception: ", "")),
@@ -417,6 +423,7 @@ class _KayitSayfasiState extends State<KayitSayfasi> {
             behavior: SnackBarBehavior.floating,
           ),
         );
+      }
     } finally {
       if (mounted) setState(() => _isYukleniyor = false);
     }
@@ -466,27 +473,27 @@ class _KayitSayfasiState extends State<KayitSayfasi> {
               TextField(
                 controller: _adCtrl,
                 style: TextStyle(color: yaziRengi()),
-                decoration: _dec('Ad', Icons.person),
+                decoration: _dec(t('signup_name'), Icons.person),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: _soyadCtrl,
                 style: TextStyle(color: yaziRengi()),
-                decoration: _dec('Soyad', Icons.person_outline),
+                decoration: _dec(t('signup_surname'), Icons.person_outline),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: _emailCtrl,
                 style: TextStyle(color: yaziRengi()),
                 keyboardType: TextInputType.emailAddress,
-                decoration: _dec('E-posta', Icons.email),
+                decoration: _dec(t('signup_email'), Icons.email),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: _sifreCtrl,
                 obscureText: true,
                 style: TextStyle(color: yaziRengi()),
-                decoration: _dec('Şifre (min 8 karakter)', Icons.lock),
+                decoration: _dec(t('signup_password'), Icons.lock),
               ),
               const SizedBox(height: 32),
               ElevatedButton(
@@ -536,11 +543,24 @@ class _AnaSayfaState extends State<AnaSayfa> {
   late int _seciliSayfaIndex;
   final Color anaRenk = const Color(0xFF257bf4);
 
+  // IndexedStack keys for state preservation
+  late final List<GlobalKey> _tabKeys;
+  // Anlık istatistik yenileme tetikleyicisi — arttırıldığında SekmeAnaSayfa yeniler
+  int _istatistikTetikleyici = 0;
+
   // Tutorial Keys
   final GlobalKey kesfetKey = GlobalKey();
   final GlobalKey magazaKey = GlobalKey();
   final GlobalKey profilKey = GlobalKey();
   final GlobalKey fabKey = GlobalKey();
+  final GlobalKey garageKey = GlobalKey();
+
+  final GlobalKey newProjectKey = GlobalKey();
+  final GlobalKey statsKey = GlobalKey();
+  final GlobalKey garageSectionKey = GlobalKey();
+  final GlobalKey draftsKey = GlobalKey();
+  final GlobalKey likeKey = GlobalKey();
+  final GlobalKey commentKey = GlobalKey();
 
   int _tutorialStep = -1; // -1: Kapalı, 0-6: Adımlar
   bool _isTutorialAnimating = false;
@@ -553,6 +573,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
   @override
   void initState() {
     super.initState();
+    _tabKeys = List.generate(4, (_) => GlobalKey());
     _seciliSayfaIndex = widget.initialIndex;
     _kullaniciBilgileriniYukle();
     // Bildirim badge'ini yükle
@@ -593,17 +614,15 @@ class _AnaSayfaState extends State<AnaSayfa> {
     // Hide overlay during transition to prevent red screens due to missing contexts
     if (mounted) setState(() => _tutorialStep = -2);
 
-    // Tab geçişleri
+    // Tab geçişleri (Yeni sıra: 0=AnaSayfa, 1=Garaj, 2=Keşfet, 3=Profil)
     if (nextStep == 4 || nextStep == 5) {
-      if (_seciliSayfaIndex != 1) {
-        setState(() => _seciliSayfaIndex = 1); // Keşfet
+      if (_seciliSayfaIndex != 2) {
+        setState(() => _seciliSayfaIndex = 2); // Keşfet (artık index 2)
         await Future.delayed(const Duration(milliseconds: 300));
       }
     } else if (nextStep == 6) {
-      if (_seciliSayfaIndex != 2) {
-        setState(() => _seciliSayfaIndex = 2); // Mağaza
-        await Future.delayed(const Duration(milliseconds: 300));
-      }
+      // Mağaza artık ayrı sayfa, header'daki butondan açılıyor
+      // Bu adım ana sayfada kalacak
     } else if (nextStep == 7) {
       if (_seciliSayfaIndex != 3) {
         setState(() => _seciliSayfaIndex = 3); // Profil
@@ -618,13 +637,13 @@ class _AnaSayfaState extends State<AnaSayfa> {
       // Kaydırma işlemi
       GlobalKey? key;
       if (nextStep == 0)
-        key = SekmeAnaSayfa.newProjectKey;
+        key = newProjectKey;
       else if (nextStep == 1)
-        key = SekmeAnaSayfa.statsKey;
+        key = statsKey;
       else if (nextStep == 2)
-        key = SekmeAnaSayfa.garageKey;
+        key = garageSectionKey;
       else if (nextStep == 3)
-        key = SekmeAnaSayfa.draftsKey;
+        key = draftsKey;
 
       if (key?.currentContext != null) {
         Scrollable.ensureVisible(
@@ -710,90 +729,49 @@ class _AnaSayfaState extends State<AnaSayfa> {
 
   Widget _sayfaIceriginiGetir() {
     bool isGuest = !_yukleniyor && _kullanici == null;
-    switch (_seciliSayfaIndex) {
-      case 0:
-        return SekmeAnaSayfa(kullanici: _kullanici, kredi: _kredi, isGuest: isGuest, headerWidget: _ustBilgiOlustur());
-      case 1:
-        return SekmeKesfet(isGuest: isGuest);
-      case 2:
-        return SekmeMagaza(onCreditsChanged: _kullaniciBilgileriniYukle, isGuest: isGuest);
-      case 3:
-        return SekmeProfil(
+    return IndexedStack(
+      index: _seciliSayfaIndex,
+      children: [
+        SekmeAnaSayfa(
+          key: _tabKeys[0],
+          kullanici: _kullanici,
+          kredi: _kredi,
+          isGuest: isGuest,
+          headerWidget: _ustBilgiOlustur(),
+          newProjectKey: newProjectKey,
+          statsKey: statsKey,
+          garageKey: garageSectionKey,
+          draftsKey: draftsKey,
+          refreshTrigger: _istatistikTetikleyici,
+        ),
+        SekmeGaraj(key: _tabKeys[1], kullanici: _kullanici, isGuest: isGuest),
+        SekmeKesfet(
+          key: _tabKeys[2],
+          isGuest: isGuest,
+          currentUserId: _kullanici?.userId,
+          likeKey: likeKey,
+          commentKey: commentKey,
+        ),
+        SekmeProfil(
+          key: _tabKeys[3],
           kullanici: _kullanici,
           kredi: _kredi,
           isGuest: isGuest,
           onTopUpTap: () {
             setState(() {
-              _seciliSayfaIndex = 2;
+              _seciliSayfaIndex = 1;
             });
           },
           onLangTap: _diliSec,
           onProfileUpdated: _kullaniciBilgileriniYukle,
-        );
-      default:
-        return SekmeAnaSayfa(kullanici: _kullanici, kredi: _kredi, isGuest: isGuest);
-    }
-  }
-
-  // Madde 10: Bildirim badge ile çan ikonu
-  Widget _bildirimButonuOlustur() {
-    return ValueListenableBuilder<int>(
-      valueListenable: okunmamisBildirimSayisi,
-      builder: (context, sayi, child) {
-        return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: yaziRengi().withValues(alpha: 0.05),
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: Icon(Icons.notifications_none, color: yaziRengi()),
-                onPressed: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (c) => const BildirimSayfasi()),
-                  );
-                  // Geri dönünce badge güncelle
-                  BildirimServisi.okunmamisSayisiniGuncelle();
-                },
-              ),
-            ),
-            if (sayi > 0)
-              Positioned(
-                right: 2,
-                top: 2,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: arkaplanRengi(), width: 2),
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 20,
-                    minHeight: 20,
-                  ),
-                  child: Text(
-                    '$sayi',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
+        ),
+      ],
     );
   }
 
   Widget _ustBilgiOlustur() {
     final profilUrl = ApiServisi.buildImageUrl(_kullanici?.profilImageUrl);
+    final bool isGuest = !_yukleniyor && _kullanici == null;
     return GlassHeader(
       child: SafeArea(
         child: Row(
@@ -840,7 +818,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
                   ],
                 ),
                 const SizedBox(width: 16),
-                // Madde 5: AI Auto Studio kaldırıldı
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -853,18 +830,55 @@ class _AnaSayfaState extends State<AnaSayfa> {
                         color: yaziRengi(),
                       ),
                     ),
+                    if (!isGuest) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.monetization_on,
+                            color: Color(0xFFFFD700),
+                            size: 16,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$_kredi',
+                            style: const TextStyle(
+                              color: Color(0xFFFFD700),
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ],
             ),
-            _bildirimButonuOlustur(),
+            IconButton(
+              key: magazaKey,
+              icon: Icon(Icons.shopping_bag_outlined, color: yaziRengi()),
+              onPressed: () {
+                if (titresimAcik.value) HapticFeedback.lightImpact();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (c) => Scaffold(
+                      backgroundColor: arkaplanRengi(),
+                      body: SekmeMagaza(
+                        onCreditsChanged: _kullaniciBilgileriniYukle,
+                        isGuest: isGuest,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
     );
   }
-
-  // _floatingAppBarOlustur() was removed to allow the header to scroll with the page.
 
   Widget _altMenusuButonuOlustur(
     IconData ikon,
@@ -880,18 +894,27 @@ class _AnaSayfaState extends State<AnaSayfa> {
         if (!aktifMi) if (titresimAcik.value) HapticFeedback.lightImpact();
         setState(() {
           _seciliSayfaIndex = index;
+          // Ana Sayfa'ya dönünce istatistikleri anlık yenile
+          if (index == 0) _istatistikTetikleyici++;
         });
       },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(ikon, color: aktifMi ? anaRenk : Colors.grey, size: 24),
-          Text(
-            etiket,
+          AnimatedScale(
+            scale: aktifMi ? 1.15 : 1.0,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            child: Icon(ikon, color: aktifMi ? anaRenk : Colors.grey, size: 24),
+          ),
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 200),
             style: TextStyle(
               color: aktifMi ? anaRenk : Colors.grey,
-              fontSize: 10,
+              fontSize: aktifMi ? 11 : 10,
+              fontWeight: aktifMi ? FontWeight.bold : FontWeight.normal,
             ),
+            child: Text(etiket),
           ),
         ],
       ),
@@ -990,17 +1013,17 @@ class _AnaSayfaState extends State<AnaSayfa> {
                       children: <Widget>[
                         _altMenusuButonuOlustur(Icons.home, t('home_tab'), 0),
                         _altMenusuButonuOlustur(
-                          Icons.photo_library_outlined,
-                          t('discover_tab'),
+                          Icons.directions_car_outlined,
+                          t('my_garage'),
                           1,
-                          key: kesfetKey,
+                          key: garageKey,
                         ),
                         const SizedBox(width: 40),
                         _altMenusuButonuOlustur(
-                          Icons.diamond_outlined,
-                          t('store_tab'),
+                          Icons.smart_display_outlined,
+                          t('discover_tab'),
                           2,
-                          key: magazaKey,
+                          key: kesfetKey,
                         ),
                         _altMenusuButonuOlustur(
                           Icons.person_outline,
@@ -1026,49 +1049,49 @@ class _AnaSayfaState extends State<AnaSayfa> {
 
     switch (_tutorialStep) {
       case 0:
-        targetKey = SekmeAnaSayfa.newProjectKey;
-        title = "Yeni Proje";
-        desc = "Buradan AI ile yeni bir modifiye projesi başlatabilirsin.";
+        targetKey = newProjectKey;
+        title = t('tut_new_project');
+        desc = t('tut_new_project_desc');
         break;
       case 1:
-        targetKey = SekmeAnaSayfa.statsKey;
-        title = "İstatistiklerin";
-        desc = "Render sayını ve mevcut kredilerini buradan takip edebilirsin.";
+        targetKey = statsKey;
+        title = t('tut_stats');
+        desc = t('tut_stats_desc');
         break;
       case 2:
-        targetKey = SekmeAnaSayfa.garageKey;
-        title = "Garajın";
-        desc = "Daha önce yaptığın tüm çalışmaları burada görebilirsin.";
+        targetKey = garageKey;
+        title = t('tut_garage');
+        desc = t('tut_garage_desc');
         break;
       case 3:
-        targetKey = SekmeAnaSayfa.draftsKey;
-        title = "Taslaklar";
-        desc = "Yarım kalan projelerine buradan devam edebilirsin.";
+        targetKey = draftsKey;
+        title = t('tut_drafts');
+        desc = t('tut_drafts_desc');
         break;
       case 4:
-        targetKey = SekmeKesfet.likeKey;
-        title = "Beğen";
-        desc = "Topluluğun en alevli tasarımlarına '🔥' bırakabilirsin.";
+        targetKey = likeKey;
+        title = t('tut_like');
+        desc = t('tut_like_desc');
         break;
       case 5:
-        targetKey = SekmeKesfet.commentKey;
-        title = "Yorum Yap";
-        desc = "Tasarımlar hakkında fikirlerini paylaş ve diğer kullanıcılarla etkileşime geç.";
+        targetKey = commentKey;
+        title = t('tut_comment');
+        desc = t('tut_comment_desc');
         break;
       case 6:
         targetKey = magazaKey;
-        title = "Mağaza";
-        desc = "Arkadaşlarını davet ederek kredi kazanabilir veya yeni kredi paketleri alabilirsin.";
+        title = t('tut_store');
+        desc = t('tut_store_desc');
         break;
       case 7:
         targetKey = profilKey;
-        title = "Profil";
-        desc = "Hesap bilgilerini, yasal metinleri ve iletişim detaylarını buradan yönet.";
+        title = t('tut_profile');
+        desc = t('tut_profile_desc');
         break;
       case 8:
         targetKey = fabKey;
-        title = "Başla!";
-        desc = "Tüm bu özellikleri kullanmak için sihirbaz değneğine tıkla ve projeni oluştur!";
+        title = t('tut_start');
+        desc = t('tut_start_desc');
         break;
       default:
         return const SizedBox.shrink();

@@ -17,6 +17,7 @@ from datetime import timedelta
 
 class GameScoreInput(BaseModel):
     score: int
+    game_type: str = "car_racing"
 
 class LeaderboardResponse(BaseModel):
     username: str
@@ -269,26 +270,65 @@ async def update_game_score(
     current_user: User = Depends(get_current_user)
 ):
     now = datetime.utcnow()
-    # Check if a week has passed since last update
-    if current_user.game_score_updated_at:
-        diff = now.replace(tzinfo=None) - current_user.game_score_updated_at.replace(tzinfo=None)
-        if diff.days >= 7:
-            current_user.game_score = score_in.score
-            current_user.game_score_updated_at = now
+    game_type = score_in.game_type
+    
+    if game_type == "fly_bird":
+        if current_user.game_score_fly_bird_updated_at:
+            diff = now.replace(tzinfo=None) - current_user.game_score_fly_bird_updated_at.replace(tzinfo=None)
+            if diff.days >= 7:
+                current_user.game_score_fly_bird = score_in.score
+                current_user.game_score_fly_bird_updated_at = now
+            else:
+                if score_in.score > current_user.game_score_fly_bird:
+                    current_user.game_score_fly_bird = score_in.score
+                    current_user.game_score_fly_bird_updated_at = now
         else:
-            if score_in.score > current_user.game_score:
+            current_user.game_score_fly_bird = score_in.score
+            current_user.game_score_fly_bird_updated_at = now
+        await db.commit()
+        return {"message": "Score updated", "best_score": current_user.game_score_fly_bird}
+    else:
+        # Defaults to car_racing
+        if current_user.game_score_car_racing_updated_at:
+            diff = now.replace(tzinfo=None) - current_user.game_score_car_racing_updated_at.replace(tzinfo=None)
+            if diff.days >= 7:
+                current_user.game_score_car_racing = score_in.score
+                current_user.game_score_car_racing_updated_at = now
+            else:
+                if score_in.score > current_user.game_score_car_racing:
+                    current_user.game_score_car_racing = score_in.score
+                    current_user.game_score_car_racing_updated_at = now
+        else:
+            current_user.game_score_car_racing = score_in.score
+            current_user.game_score_car_racing_updated_at = now
+            
+        # Also update legacy game_score for fallback queries
+        if current_user.game_score_updated_at:
+            diff = now.replace(tzinfo=None) - current_user.game_score_updated_at.replace(tzinfo=None)
+            if diff.days >= 7:
                 current_user.game_score = score_in.score
                 current_user.game_score_updated_at = now
-    else:
-        current_user.game_score = score_in.score
-        current_user.game_score_updated_at = now
-    await db.commit()
-    return {"message": "Score updated", "best_score": current_user.game_score}
+            else:
+                if score_in.score > current_user.game_score:
+                    current_user.game_score = score_in.score
+                    current_user.game_score_updated_at = now
+        else:
+            current_user.game_score = score_in.score
+            current_user.game_score_updated_at = now
+            
+        await db.commit()
+        return {"message": "Score updated", "best_score": current_user.game_score_car_racing}
 
 @router.get("/game/leaderboard", response_model=list[LeaderboardResponse])
-async def get_game_leaderboard(db: AsyncSession = Depends(get_session)):
+async def get_game_leaderboard(game_type: str = "car_racing", db: AsyncSession = Depends(get_session)):
     one_week_ago = datetime.utcnow() - timedelta(days=7)
-    query = select(User).where(User.game_score > 0, User.game_score_updated_at >= one_week_ago).order_by(User.game_score.desc()).limit(3)
-    result = await db.execute(query)
-    users = result.scalars().all()
-    return [{"username": u.name or "Anonim", "score": u.game_score} for u in users]
+    if game_type == "fly_bird":
+        query = select(User).where(User.game_score_fly_bird > 0, User.game_score_fly_bird_updated_at >= one_week_ago).order_by(User.game_score_fly_bird.desc()).limit(3)
+        result = await db.execute(query)
+        users = result.scalars().all()
+        return [{"username": u.name or "Anonim", "score": u.game_score_fly_bird} for u in users]
+    else:
+        query = select(User).where(User.game_score_car_racing > 0, User.game_score_car_racing_updated_at >= one_week_ago).order_by(User.game_score_car_racing.desc()).limit(3)
+        result = await db.execute(query)
+        users = result.scalars().all()
+        return [{"username": u.name or "Anonim", "score": u.game_score_car_racing} for u in users]

@@ -1,24 +1,82 @@
 # app/main.py — CORS ve güncel hali
 
+import mimetypes
+mimetypes.add_type("model/gltf-binary", ".glb")
+mimetypes.add_type("model/gltf+json", ".gltf")
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from fastapi.openapi.utils import get_openapi
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.staticfiles import StaticFiles
-from app.database.db import init_db
+import asyncio
+from datetime import datetime, timedelta
+from sqlalchemy import update
+from app.database.db import init_db, AsyncSessionLocal
+from app.database.models import User
 from app.api.routers import (
     user_router, upload_image_router,
     plugins_router, community_router,
-    store_router, modification_router
+    store_router, modification_router,
+    meshy_router
 )
 import os
+
+
+async def weekly_score_reset_task():
+    while True:
+        try:
+            # Check last reset file
+            reset_file = "uploads/last_weekly_reset.txt"
+            need_reset = False
+            now = datetime.utcnow()
+            
+            if os.path.exists(reset_file):
+                with open(reset_file, "r") as f:
+                    content = f.read().strip()
+                try:
+                    last_reset = datetime.fromisoformat(content)
+                    if now - last_reset >= timedelta(days=7):
+                        need_reset = True
+                except ValueError:
+                    need_reset = True
+            else:
+                need_reset = True
+                
+            if need_reset:
+                # Perform global reset
+                async with AsyncSessionLocal() as db:
+                    q = (
+                        update(User)
+                        .values(
+                            game_score=0,
+                            game_score_car_racing=0,
+                            game_score_fly_bird=0,
+                            game_score_updated_at=now,
+                            game_score_car_racing_updated_at=now,
+                            game_score_fly_bird_updated_at=now
+                        )
+                    )
+                    await db.execute(q)
+                    await db.commit()
+                # Update file
+                with open(reset_file, "w") as f:
+                    f.write(now.isoformat())
+                print("Global weekly game scores reset successfully.")
+        except Exception as e:
+            print(f"Error in weekly_score_reset_task: {e}")
+            
+        # Sleep for 1 hour before checking again
+        await asyncio.sleep(3600)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    bg_task = asyncio.create_task(weekly_score_reset_task())
     yield
+    bg_task.cancel()
 
 
 app = FastAPI(
@@ -35,7 +93,7 @@ ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,   # Production'da ["https://uygulamaniz.com"] yap
-    allow_credentials=True,
+    allow_credentials=False if "*" in ALLOWED_ORIGINS else True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -58,6 +116,7 @@ app.include_router(plugins_router.router, tags=["Plugins"])
 app.include_router(community_router.router, tags=["Community"])
 app.include_router(store_router.router, tags=["Store"])
 app.include_router(modification_router.router, tags=["Modifications"])
+app.include_router(meshy_router.router, tags=["Meshy AI"])
 
 # Statik dosya servisi
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

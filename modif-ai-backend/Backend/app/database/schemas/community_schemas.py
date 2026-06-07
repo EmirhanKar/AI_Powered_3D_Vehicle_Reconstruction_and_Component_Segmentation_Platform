@@ -17,6 +17,9 @@ class CommentResponse(BaseModel):
     user_id: int
     content: str
     created_at: datetime
+    user_name: str = "Kullanıcı"
+    like_count: int = 0
+    is_liked: bool = False
 
     class Config:
         from_attributes = True
