@@ -121,6 +121,16 @@ class _SekmeGarajState extends State<SekmeGaraj> with SingleTickerProviderStateM
   }
 
 
+  Future<void> _yenile() async {
+    if (!mounted || widget.isGuest) return;
+    setState(() {
+      _garajFuture = ApiServisi().garajiGetir();
+    });
+    try {
+      await _garajFuture;
+    } catch (_) {}
+  }
+
   Widget _buildList(List<Scan> scans, String method) {
     final filtered = scans.where((s) {
       if (method == '3d') {
@@ -129,26 +139,35 @@ class _SekmeGarajState extends State<SekmeGaraj> with SingleTickerProviderStateM
       return s.method == method;
     }).toList();
 
-    if (filtered.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.garage, size: 64, color: yaziRengi().withOpacity(0.2)),
-            const SizedBox(height: 16),
-            Text(
-              'Garajınızda henüz ${method == '3d' ? '3D' : '2D'} araba bulunmuyor.',
-              style: TextStyle(color: ikinciYaziRengi(), fontSize: 16),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: filtered.length,
-      itemBuilder: (context, index) {
+    return RefreshIndicator(
+      onRefresh: _yenile,
+      color: anaRenk,
+      child: filtered.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.garage, size: 64, color: yaziRengi().withOpacity(0.2)),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Garajınızda henüz ${method == '3d' ? '3D' : '2D'} araba bulunmuyor.\n(Yenilemek için aşağı çekin)',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: ikinciYaziRengi(), fontSize: 15),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              itemCount: filtered.length,
+              itemBuilder: (context, index) {
         final scan = filtered[index];
         final thumbUrl = ApiServisi.buildImageUrl(scan.thumbnailUrl) ?? 'https://images.unsplash.com/photo-1603386329225-868f9b1ee6c9?q=80&w=1000';
         
@@ -238,8 +257,9 @@ class _SekmeGarajState extends State<SekmeGaraj> with SingleTickerProviderStateM
           ),
         );
       },
-    );
-  }
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -270,6 +290,16 @@ class _SekmeGarajState extends State<SekmeGaraj> with SingleTickerProviderStateM
             : null,
         title: Text('Garajım', style: TextStyle(color: yaziRengi(), fontSize: 18, fontWeight: FontWeight.bold)),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh, color: yaziRengi()),
+            tooltip: 'Yenile',
+            onPressed: () {
+              if (titresimAcik.value) HapticFeedback.lightImpact();
+              _yenile();
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
