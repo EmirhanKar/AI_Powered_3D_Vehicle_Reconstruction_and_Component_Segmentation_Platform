@@ -238,25 +238,26 @@ __marimo__/
 # =================================================================
 #  Backend — Uploads & Generated
 # =================================================================
-modif-ai-backend/Backend/uploads/
-modif-ai-backend/Backend/*.db
-modif-ai-backend/Backend/*.db-*
-modif-ai-backend/venv/
+Backend/uploads/
+Backend/*.db
+Backend/*.db-*
+Backend/venv/
 
 # =================================================================
 #  Frontend (Flutter) — Build Artifacts
 # =================================================================
-Frontend-MODIF-AI/build/
-Frontend-MODIF-AI/lib/build/
-Frontend-MODIF-AI/.dart_tool/
+Frontend/build/
+Frontend/lib/build/
+Frontend/.dart_tool/
 **/build/
 
 # =================================================================
 #  CNN Otonom Araç — Büyük Çıktılar
 # =================================================================
-CNN_Otonom_Arac_Tespiti
+# CNN_Otonom_Arac_Tespiti/runs/
 CNN_Otonom_Arac_Tespiti/runs/
 CNN_Otonom_Arac_Tespiti/data/
 CNN_Otonom_Arac_Tespiti/cars_train/
 CNN_Otonom_Arac_Tespiti/cars_test/
 CNN_Otonom_Arac_Tespiti/venv/
+CNN_Otonom_Arac_Tespiti/*.keras

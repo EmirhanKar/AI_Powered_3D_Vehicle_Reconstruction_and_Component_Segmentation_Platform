@@ -12,8 +12,7 @@ from segment_anything import sam_model_registry, SamPredictor
 from ultralytics import YOLO
 
 # ─── AYARLAR ──────────────────────────────────────────────────────────────────
-SAM_CHECKPOINT  = r"D:\MODIFIAI\3dservis\SAM\sam_vit_h_4b8939.pth"
-YOLO_MODEL_PATH = r"D:\MODIFIAI\3dservis\runs\segment\train4\weights\best.pt"
+from config import SAM_CHECKPOINT, YOLO_MODEL_PATH
 # ──────────────────────────────────────────────────────────────────────────────
 
 

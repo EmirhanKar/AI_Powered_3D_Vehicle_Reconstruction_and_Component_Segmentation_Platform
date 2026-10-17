@@ -7,3 +7,10 @@ scipy
 open3d
 matplotlib
 segment-anything
+python-dotenv
+requests
+transformers
+huggingface-hub
+accelerate
+rembg
+gradio_client

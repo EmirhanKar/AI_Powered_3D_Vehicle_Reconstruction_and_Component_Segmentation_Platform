@@ -9,14 +9,11 @@ import matplotlib.pyplot as plt
 from segment_anything import sam_model_registry, SamPredictor
 from depth_anything_3.api import DepthAnything3
 
+    
 # ----------------------------
-# PATH SETUP
+# VISUALIZATION 
 # ----------------------------
-
-# ----------------------------
-# VISUALIZATION
-# ----------------------------
-def visualize_depth_and_confidence(images, depths, confidences, sample_idx=0):
+def visualize_depth_and_confidence(images, depths, confidences, sample_idx=0):#sample_idx ne demek = 
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
     axes[0].imshow(images[sample_idx])
     axes[0].set_title("RGB Image")
@@ -27,7 +24,7 @@ def visualize_depth_and_confidence(images, depths, confidences, sample_idx=0):
     axes[2].imshow(confidences[sample_idx], cmap="viridis")
     axes[2].set_title("Confidence Map")
     axes[2].axis("off")
-    plt.tight_layout()
+    plt.tight_layout() 
     plt.show()
 
 def visualize_point_cloud_open3d(points, colors=None, window_name="Point Cloud"):
@@ -44,7 +41,7 @@ def visualize_point_cloud_open3d(points, colors=None, window_name="Point Cloud")
     vis.destroy_window()
 
 # ----------------------------
-# MODEL LOAD
+# MODEL LOAD 
 # ----------------------------
 def load_da3_model():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -53,6 +50,7 @@ def load_da3_model():
     model = DepthAnything3.from_pretrained("depth-anything/DA3-LARGE")
     model = model.to(device)
     return model, device
+
 
 def load_sam_model(checkpoint_path):
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -68,7 +66,7 @@ def load_sam_model(checkpoint_path):
 # ----------------------------
 def get_car_mask(predictor, image_rgb):
     h, w = image_rgb.shape[:2]
-    input_points = np.array([
+    input_points = np.array([ 
         [w // 2, h // 2],
         [w // 2, h // 3],
         [w // 2, 2 * h // 3],
@@ -116,7 +114,7 @@ def generate_masks(image_files, masks_path, sam_predictor):
         mask_files.append(mask_path)
     return mask_files
 
-# ----------------------------
+# ----------------------------09u
 # IMAGE LOADING
 # ----------------------------
 def load_images_from_folder(data_path, extensions=["*.jpg", "*.png", "*.jpeg", "*.jfif"]):
@@ -125,6 +123,7 @@ def load_images_from_folder(data_path, extensions=["*.jpg", "*.png", "*.jpeg", "
         image_files.extend(sorted(glob.glob(os.path.join(data_path, ext))))
     print(f"Found {len(image_files)} images in {data_path}")
     return image_files
+
 
 # ----------------------------
 # DEPTH INFERENCE
@@ -195,23 +194,34 @@ def merge_point_clouds(prediction, mask_files, conf_thresh=0.7):
     print(f"Toplam: {len(merged_points)} nokta")
     return merged_points, merged_colors
 
+
 # ----------------------------
 # CLEAN POINT CLOUD
 # ----------------------------
 def clean_point_cloud_open3d(points_3d, colors_3d):
+    """
+    Scipy ile statistical outlier — abort yok, arabadan nokta silmez.
+    Open3D remove_statistical_outlier 100k+ noktada C++ abort ediyor,
+    bu yüzden scipy KD-tree kullanıyoruz. Voxel YOK, araba yoğunluğu korunur.
+    """
     from scipy.spatial import cKDTree
+
     print(f" Temizlik başlıyor: {len(points_3d)} nokta")
     if colors_3d.max() > 1.0:
         colors_3d = colors_3d / 255.0
+
+    # --- Scipy statistical outlier (std_ratio=5.0, orijinalin aynısı) ---
     print(" Scipy outlier hesaplanıyor (10-20 sn sürebilir)...")
     tree = cKDTree(points_3d)
-    distances, _ = tree.query(points_3d, k=21)
-    mean_d = distances[:, 1:].mean(axis=1)
+    distances, _ = tree.query(points_3d, k=21)   # 20 komşu + kendisi
+    mean_d = distances[:, 1:].mean(axis=1)        # kendisi hariç
     threshold = mean_d.mean() + 5.0 * mean_d.std()
     mask = mean_d < threshold
     points_3d = points_3d[mask]
     colors_3d  = colors_3d[mask]
     print(f" Statistical sonrası: {len(points_3d)} nokta")
+
+    # --- Adaptif bbox: %0.5-%99.5 → sadece gerçek uçan noktalar gider ---
     if len(points_3d) > 0:
         lo = np.percentile(points_3d, 0.5, axis=0)
         hi = np.percentile(points_3d, 99.5, axis=0)
@@ -220,7 +230,9 @@ def clean_point_cloud_open3d(points_3d, colors_3d):
         points_3d = points_3d[mask_b]
         colors_3d  = colors_3d[mask_b]
         print(f" Bbox sonrası: {len(points_3d)} nokta")
+
     return points_3d, colors_3d
+
 
 def clean_point_cloud_scipy(points_3d, colors_3d, nb_neighbors=20, std_ratio=2.0):
     from scipy.spatial import cKDTree
@@ -239,17 +251,26 @@ def create_mesh(points, colors):
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(points)
     pcd.colors = o3d.utility.Vector3dVector(colors if colors.max() <= 1.0 else colors / 255.0)
+
+    # 1. Normalleri hesapla (yüzey için şart)
     pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
     pcd.orient_normals_consistent_tangent_plane(10)
+
+    # 2. Poisson Mesh
     print("-> Yüzey örülüyor (Poisson)...")
     mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=9)
+
+    # 3. Gereksiz kısımları temizle
     print("-> Renkler mesh üzerine mühürleniyor...")
     densities = np.asarray(densities)
     mesh.remove_vertices_by_mask(densities < np.quantile(densities, 0.02))
+
+    # Mesh'i temizle
     mesh.remove_degenerate_triangles()
     mesh.remove_duplicated_triangles()
     mesh.remove_duplicated_vertices()
     mesh.remove_non_manifold_edges()
+
     print("Renkli mesh hazır.")
     return mesh
 

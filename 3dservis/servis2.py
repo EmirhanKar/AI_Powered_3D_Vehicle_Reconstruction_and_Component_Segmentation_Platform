@@ -13,21 +13,23 @@ logging.basicConfig(
 )
 log = logging.getLogger("modifai_servis2")
 
-BACKEND_URL = "http://10.204.181.194:8000"
-ADMIN_KEY   = "ABCDEFGHIJKLMNOPRSTUVYZ123"
-BEKLEME_SN  = 5
+from dotenv import load_dotenv
+load_dotenv()
+from config import SAM_CHECKPOINT
+
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+ADMIN_KEY   = os.getenv("ADMIN_API_KEY", "ABCDEFGHIJKLMNOPRSTUVYZ123")
+BEKLEME_SN  = int(os.getenv("TRIPO_POLL_INTERVAL", "5"))
 
 # Lazy loaded 3D models
 _da3_model_tuple = None   # (model, device) tuple olarak saklanır
 _sam_predictor   = None
 
-SAM_CHECKPOINT = r"D:\MODIFIAI\3dservis\SAM\sam_vit_h_4b8939.pth"
-
 def get_3d_models():
     global _da3_model_tuple, _sam_predictor
     if _da3_model_tuple is None or _sam_predictor is None:
-        log.info("3D modelleri belleğe yükleniyor (DA3-BASE, Apache 2.0)...")
-        from test6 import load_da3_model, load_sam_model
+        log.info("3D modelleri belleğe yükleniyor...")
+        from test5 import load_da3_model, load_sam_model
         _da3_model_tuple = load_da3_model()
         _sam_predictor   = load_sam_model(SAM_CHECKPOINT)
         log.info("3D modelleri başarıyla yüklendi.")
@@ -50,12 +52,9 @@ def bekleyen_isleri_getir(endpoint):
 
 def glb_yukle(scan_id, glb_path):
     """
-    GLB veya GLTF dosyasını backend'e yükler.
-    İçerik tipi otomatik belirlenir.
+    GLB dosyasını backend'e raw binary olarak yükler.
+    Multipart kullanmaz — büyük dosyalarda parser hatası önlenir.
     """
-    ext = os.path.splitext(glb_path)[1].lower()
-    content_type = "model/gltf-binary" if ext == ".glb" else "model/gltf+json"
-
     if not os.path.exists(glb_path):
         log.error(f"Scan {scan_id}: Yüklenecek dosya bulunamadı → {glb_path}")
         return False
@@ -65,12 +64,16 @@ def glb_yukle(scan_id, glb_path):
 
     try:
         with open(glb_path, "rb") as f:
-            r = requests.post(
-                f"{BACKEND_URL}/scans/complete/3d/{scan_id}",
-                files={"model_file": (os.path.basename(glb_path), f, content_type)},
-                headers={"X-Admin-Key": ADMIN_KEY},
-                timeout=300   # Büyük dosyalar için 5 dk timeout
-            )
+            data = f.read()
+        r = requests.put(
+            f"{BACKEND_URL}/scans/complete/3d/{scan_id}",
+            data=data,
+            headers={
+                "X-Admin-Key": ADMIN_KEY,
+                "Content-Type": "application/octet-stream",
+            },
+            timeout=300
+        )
         r.raise_for_status()
         log.info(f"Scan {scan_id}: 3D model backend'e yüklendi ✓ ({r.status_code})")
         return True
@@ -108,14 +111,14 @@ def main():
                 try:
                     out_dir = process_scan(scan)
 
-                    if method == "3d" and out_dir:
+                    if method in ("3d", "3d_single") and out_dir:
                         log.info(f"Scan {scan_id}: 3D mesh çıkarma işlemi başlıyor (DA3-BASE, Apache 2.0)...")
 
                         da3_model_tuple, sam_predictor = get_3d_models()
                         final_3d_dir = os.path.join("temp_3d_output", str(scan_id))
                         os.makedirs(final_3d_dir, exist_ok=True)
 
-                        from test6 import generate_3d_model
+                        from test5 import generate_3d_model
                         # generate_3d_model artık garantili path veya None döndürüyor
                         glb_path = generate_3d_model(
                             out_dir,
