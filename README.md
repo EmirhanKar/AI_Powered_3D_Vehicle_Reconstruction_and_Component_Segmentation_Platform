@@ -40,7 +40,6 @@
 - 🛞 **2B Jant Giydirme**: Özel eğitilmiş YOLOv8-seg modeli ile tekerleklerin bulunması, elips tespiti, perspektif homografi (warp perspective), renk eşleme ve aydınlatma uyarlaması ile gerçekçi jant montajı.
 - 🎨 **2B Kaporta Boyama**: Segment Anything Model (SAM) ile tekerlekler, camlar ve plastik aksamlar hariç tutularak araç kaportasının LAB renk uzayında doğal yansımalar korunarak boyanması.
 - 🧊 **Lokal 3B Rekonstrüksiyon**: Meta SAM + Depth Anything 3 ile çoklu açılardan derinlik çıkarımı, Open3D ile point cloud filtreleme ve Poisson yüzey örme pipeline'ı ile `.glb` 3D model üretimi.
-- ☁️ **Tripo3D Bulut Entegrasyonu**: Metinden/görselden 3D üretim ve tamamlanmış modellere yapay zekâ tekstürleme giydirme yeteneği.
 - 📱 **Etkileşimli 3D Mobil Stüdyo**: Flutter `model_viewer_plus` ile 360° döndürülebilir, yakınlaştırılabilir 3D GLB inceleme, topluluk keşfet akışı, garaj ve taslak yönetimi.
 
 ---
@@ -59,14 +58,12 @@ flowchart TD
         Auth["JWT & Kullanıcı Yönetimi"]
         Scans["Tarama & Upload Kuyruğu"]
         Mods["Modifikasyon Router"]
-        TripoService["Tripo3D API Servisi"]
         CarDetAPI["Canlı Araç Tespit API"]
         DB[(PostgreSQL)]
     end
 
     subgraph AIWorkers["Yapay Zeka Servisleri (Worker)"]
         WorkerLocal["3dservis/servis.py\n(Depth Anything 3 + SAM + YOLOv8)"]
-        WorkerCloud["3dservis/tripo_worker.py\n(Tripo3D Cloud AI)"]
         CNN["CNN_Otonom_Arac_Tespiti\n(MobileNetV2 Model)"]
     end
 
@@ -78,9 +75,7 @@ flowchart TD
     Mods --> DB
 
     WorkerLocal -->|"Kuyruk Dinleme (pending_2d / pending_3d)"| Scans
-    WorkerLocal -->|"Sonuç Yükleme (GLB / Görsel)"| Scans
-    TripoService -.->|"Bulut Texturing"| WorkerCloud
-    Viewer -->|"GLB Modeli İndir & Oynat"| Scans
+    WorkerLocal -->|"Sonuç Yükleme (GLB / Görsel)"| Scans    Viewer -->|"GLB Modeli İndir & Oynat"| Scans
 ```
 
 ---
@@ -96,7 +91,7 @@ MODIFIAI/
 │   │   ├── api/routers/            # API uç noktaları (scans, modifications, plugins, user...)
 │   │   ├── database/models/        # SQLAlchemy veritabanı modelleri
 │   │   ├── database/schemas/       # Pydantic istek & yanıt şemaları
-│   │   └── services/               # CNN araç tespit & Tripo3D servisleri
+│   │   └── services/               # CNN araç tespit servisi
 │   ├── alembic/                    # DB migration versiyonları
 │   ├── requirements.txt            # Backend bağımlılıkları
 │   └── .env                        # Backend ortam değişkenleri
@@ -117,7 +112,6 @@ MODIFIAI/
 │   ├── car_modification.py             # YOLOv8 jant giydirme & renk entegrasyonu
 │   ├── color_change.py                 # SAM + LAB kaporta boyama motoru
 │   ├── test5.py                        # Depth Anything 3 + SAM + Open3D pipeline'ı
-│   ├── tripo_worker.py                 # Alternatif bulut Tripo3D worker'ı
 │   ├── config.py                       # Dinamik model ve klasör yol yapılandırması
 │   ├── SAM/                            # Meta SAM vit-h ağırlık dosyası
 │   └── Depth-Anything-3/               # DA3 derinlik modeli kaynak kodları
@@ -203,10 +197,7 @@ docker compose up -d
    MY_TOKEN="super_secret_jwt_key_123"
    ADMIN_API_KEY="ABCDEFGHIJKLMNOPRSTUVYZ123"
    ENVIRONMENT="development"
-   BACKEND_PUBLIC_URL="http://localhost:8000"
-   TRIPO_API_KEY="tsk_..."
-   TRIPO_MODE="test"
-   ```
+   BACKEND_PUBLIC_URL="http://localhost:8000"   ```
 6. Sunucuyu başlatın:
    ```bash
    uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -232,14 +223,12 @@ Worker servisi backend kuyruklarını dinler, 2B/3B işlemleri sırayla işleyip
    ```env
    BACKEND_URL="http://localhost:8000"
    ADMIN_API_KEY="ABCDEFGHIJKLMNOPRSTUVYZ123"
-   TRIPO_POLL_INTERVAL="5"
+   POLL_INTERVAL="5"
    ```
 4. **Lokal AI Servisini Başlatın**:
    ```bash
    python servis.py
    ```
-   *(Opsiyonel: Eğer yerel ekran kartı yerine Tripo3D bulut motorunu kullanmak isterseniz `python tripo_worker.py` çalıştırabilirsiniz).*
-
 ---
 
 ### 3. Mobil Uygulama (Flutter)
@@ -283,15 +272,13 @@ python main.py
 | `ADMIN_API_KEY` | Worker servisleri için güvenlik anahtarı | `ABCDEFGHIJKLMNOPRSTUVYZ123` |
 | `ENVIRONMENT` | Çalışma modu | `development` / `production` |
 | `BACKEND_PUBLIC_URL` | Dışarıya açık backend adresi | `http://localhost:8000` |
-| `TRIPO_API_KEY` | Tripo3D AI API Anahtarı | `tsk_...` |
-| `TRIPO_MODE` | Tripo çalışma modu | `test` / `live` |
 
 ### `3dservis/.env`
 | Değişken | Açıklama | Örnek Değer |
 |---|---|---|
 | `BACKEND_URL` | Worker'ın erişeceği backend URL'i | `http://localhost:8000` |
 | `ADMIN_API_KEY` | Backend ile eşleşen admin anahtarı | `ABCDEFGHIJKLMNOPRSTUVYZ123` |
-| `TRIPO_POLL_INTERVAL` | Kuyruk tarama sıklığı (saniye) | `5` |
+| `POLL_INTERVAL` | Kuyruk tarama sıklığı (saniye) | `5` |
 
 ---
 

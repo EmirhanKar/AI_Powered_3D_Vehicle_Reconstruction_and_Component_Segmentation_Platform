@@ -268,23 +268,7 @@ class _ProjeTipiSecimSayfasiState extends State<ProjeTipiSecimSayfasi> {
                               fontSize: 13,
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            "📝 ${t('text_to_3d')}",
-                            style: const TextStyle(
-                              color: Colors.black87,
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            t('text_to_3d_desc'),
-                            style: const TextStyle(
-                              color: Colors.black54,
-                              fontSize: 13,
-                            ),
-                          ),
+
                           const SizedBox(height: 20),
                           Align(
                             alignment: Alignment.centerRight,

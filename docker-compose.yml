@@ -39,9 +39,6 @@ services:
       ADMIN_API_KEY: ${ADMIN_API_KEY:-ABCDEFGHIJKLMNOPRSTUVYZ123}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       BACKEND_PUBLIC_URL: ${BACKEND_PUBLIC_URL:-http://localhost:8000}
-      TRIPO_API_KEY: ${TRIPO_API_KEY:-}
-      TRIPO_BASE_URL: ${TRIPO_BASE_URL:-https://api.tripo3d.ai/v2/openapi}
-      TRIPO_MODE: ${TRIPO_MODE:-test}
     volumes:
       # Canlı kod geliştirme (Local değişiklikler anında konteynere yansır)
       - ./Backend/app:/app/app

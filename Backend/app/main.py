@@ -18,8 +18,7 @@ from app.database.models import User
 from app.api.routers import (
     user_router, upload_image_router,
     plugins_router, community_router,
-    store_router, modification_router,
-    tripo_router
+    store_router, modification_router
 )
 import os
 
@@ -118,7 +117,6 @@ app.include_router(plugins_router.router, tags=["Plugins"])
 app.include_router(community_router.router, tags=["Community"])
 app.include_router(store_router.router, tags=["Store"])
 app.include_router(modification_router.router, tags=["Modifications"])
-app.include_router(tripo_router.router, tags=["Tripo3D AI"])
 
 # Statik dosya servisi
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

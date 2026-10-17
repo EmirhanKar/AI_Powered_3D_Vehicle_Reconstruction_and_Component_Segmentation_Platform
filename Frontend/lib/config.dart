@@ -5,7 +5,7 @@ class AppConfig {
   // Android emülatör: http://10.0.2.2:8000
   // iOS simülatör:    http://localhost:8000
   // Fiziksel cihaz:   http://<bilgisayar-ip>:8000
-  static const String baseUrl = "http://10.68.151.16:8000";
+  static const String baseUrl = "http://192.168.8.3:8000";
 
   // ── Timeout Ayarları ─────────────────────────────────
   static const Duration defaultTimeout = Duration(seconds: 30);

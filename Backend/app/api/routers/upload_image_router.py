@@ -342,13 +342,7 @@ async def build_scan_response(scan: Scans) -> ScanResponse:
         # Modifikasyon seçildi, tekstürleme işleniyor
         res.progress = 70
     elif scan.method in ("3d", "3d_single"):
-        if scan.processed_3d and scan.processed_3d.tripo_reconstruction_task_id:
-            try:
-                from app.services.tripo_service import tripo_client
-                task_res = await tripo_client.get_task_status(scan.processed_3d.tripo_reconstruction_task_id)
-                res.progress = task_res.progress
-            except Exception:
-                res.progress = 0
+        res.progress = 50 if scan.status == "processing" else 0
     elif scan.method == "2d":
         res.progress = 50
     return res

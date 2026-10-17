@@ -18,12 +18,6 @@ from sqlalchemy import text
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        try:
-            await conn.execute(text("ALTER TABLE processed_3d ADD COLUMN IF NOT EXISTS tripo_reconstruction_task_id VARCHAR;"))
-            await conn.execute(text("ALTER TABLE processed_3d ADD COLUMN IF NOT EXISTS tripo_texture_task_id VARCHAR;"))
-            await conn.execute(text("ALTER TABLE processed_3d ADD COLUMN IF NOT EXISTS quality VARCHAR DEFAULT 'draft';"))
-        except Exception as e:
-            print(f"Veritabanı kolonları güncellenirken hata oluştu: {e}")
 
 
 async def get_session():

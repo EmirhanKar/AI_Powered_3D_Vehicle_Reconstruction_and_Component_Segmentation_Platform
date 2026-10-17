@@ -16,7 +16,6 @@ from app.database.models import Scans, User, Modification, Processed3D, UserStat
 from app.database.models.pluginsTable.jant import Jant
 from app.database.models.pluginsTable.colors import Colors
 from app.api import get_current_user
-from app.services.tripo_service import run_tripo_3d_pipeline, run_tripo_texturing_only
 
 router = APIRouter(prefix="/modifications")
 
@@ -143,7 +142,6 @@ async def create_modification(
     3. Kullanıcının yeterli kredisi var mı kontrol et
     4. Krediyi düş
     5. Modifikasyon kaydını oluştur
-    6. Tripo3D tekstürleme işlemini arka planda başlat
     """
     # ── 1. Scan var mı ve bu kullanıcıya mı ait? ──
     scan_result = await db.execute(
@@ -231,14 +229,6 @@ async def create_modification(
     await db.commit()
     await db.refresh(new_mod)
 
-    # ── 11. Tripo3D tekstürleme işlemi (mevcut rekonstrüksiyon varsa) ──
-    if proc and proc.tripo_reconstruction_task_id:
-        background_tasks.add_task(
-            run_tripo_texturing_only,
-            scan_id=scan.scan_id,
-            recon_task_id=proc.tripo_reconstruction_task_id,
-            modification_id=new_mod.modification_id
-        )
 
     return ModificationResponse(
         modification_id=new_mod.modification_id,
@@ -317,27 +307,6 @@ async def update_modification(
     await db.commit()
     await db.refresh(mod)
 
-    # Tripo3D tekstürleme — 3D ise ve rekonstrüksiyon yapılmışsa
-    scan_result = await db.execute(
-        select(Scans)
-        .where(Scans.scan_id == mod.scan_id)
-        .options(selectinload(Scans.processed_3d))
-    )
-    scan = scan_result.scalar_one_or_none()
-
-    if scan and scan.method in ["3d", "3d_single"]:
-        proc = scan.processed_3d
-        if proc and proc.tripo_reconstruction_task_id:
-            # Scan durumunu tekrar running yap
-            scan.status = "plugin_selected"
-            await db.commit()
-
-            background_tasks.add_task(
-                run_tripo_texturing_only,
-                scan_id=scan.scan_id,
-                recon_task_id=proc.tripo_reconstruction_task_id,
-                modification_id=mod.modification_id
-            )
 
     return ModificationResponse(
         modification_id=mod.modification_id,

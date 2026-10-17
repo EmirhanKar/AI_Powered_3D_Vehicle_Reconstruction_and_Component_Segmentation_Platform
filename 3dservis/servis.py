@@ -22,7 +22,7 @@ log = logging.getLogger("modifai_servis")
 # .env dosyasından oku — hardcoded IP yerine
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 ADMIN_KEY   = os.getenv("ADMIN_API_KEY", "ABCDEFGHIJKLMNOPRSTUVYZ123")
-BEKLEME_SN  = int(os.getenv("TRIPO_POLL_INTERVAL", "5"))
+BEKLEME_SN  = int(os.getenv("POLL_INTERVAL", "5"))
 
 # Lazy loaded 3D models
 _da3_model_tuple = None   # (model, device) tuple olarak saklanır
