@@ -38,36 +38,73 @@ def load_sam_predictor(checkpoint_path: Optional[str] = None, device: Optional[s
     sam = sam_model_registry["vit_h"](checkpoint=ckpt)
     sam.to(dev)
     predictor = SamPredictor(sam)
-    print("✓ SAM modeli başarıyla yüklendi.")
+    print("[OK] SAM modeli basariyla yuklendi.")
     return predictor
+
+
+_yolo_mask_model = None
+
+def get_yolo_for_mask():
+    global _yolo_mask_model
+    if _yolo_mask_model is None:
+        from config import YOLO_MODEL_PATH
+        if os.path.exists(YOLO_MODEL_PATH):
+            try:
+                from ultralytics import YOLO
+                _yolo_mask_model = YOLO(YOLO_MODEL_PATH)
+            except Exception as e:
+                print(f"YOLO yükleme uyarısı: {e}")
+    return _yolo_mask_model
 
 
 def get_car_mask(predictor: SamPredictor, image_rgb: np.ndarray) -> np.ndarray:
     """
     Tek bir RGB araç görselinden aracın net ikili (binary) maskesini çıkarır.
-    Merkezi 5 kritik geometrik nokta referans alınarak araç arka plandan ayrılır.
+    YOLO araç parça kutusu tespiti ile SAM'e kesin araç kutusu (bounding box) prompt verilir;
+    araç karenin neresinde olursa olsun (alt, üst, kenar) gövde eksiksiz ve hatasız izole edilir.
     """
     h, w = image_rgb.shape[:2]
+    car_box = None
 
-    # Araç gövdesine odaklanan 5 kritik nokta (Merkez, Üst, Alt, Sol, Sağ)
-    input_points = np.array([
-        [w // 2, h // 2],          # Merkez
-        [w // 2, int(h * 0.35)],   # Üst tavan / kaput
-        [w // 2, int(h * 0.65)],   # Alt tampon / gövde
-        [int(w * 0.30), h // 2],   # Sol kapı / çamurluk
-        [int(w * 0.70), h // 2],   # Sağ kapı / çamurluk
-    ], dtype=np.float32)
-    input_labels = np.array([1, 1, 1, 1, 1], dtype=np.int32)
+    yolo = get_yolo_for_mask()
+    if yolo is not None:
+        try:
+            res = yolo.predict(source=image_rgb, conf=0.15, verbose=False)[0]
+            if len(res.boxes) > 0:
+                xyxy = res.boxes.xyxy.cpu().numpy()
+                x1 = max(0, int(xyxy[:, 0].min() - 15))
+                y1 = max(0, int(xyxy[:, 1].min() - 15))
+                x2 = min(w, int(xyxy[:, 2].max() + 15))
+                y2 = min(h, int(xyxy[:, 3].max() + 15))
+                car_box = np.array([x1, y1, x2, y2], dtype=np.float32)
+        except Exception as e:
+            print(f"YOLO araç kutusu kestirim uyarısı: {e}")
 
     predictor.set_image(image_rgb)
-    masks, scores, _ = predictor.predict(
-        point_coords=input_points,
-        point_labels=input_labels,
-        multimask_output=True
-    )
 
-    # En yüksek güven skoruna sahip maskeyi seç
-    best_mask = masks[np.argmax(scores)].astype(np.uint8)
+    if car_box is not None:
+        # YOLO kutusu ile SAM segmentasyonu (aracı tam gövde olarak yakalar)
+        masks, scores, _ = predictor.predict(
+            box=car_box,
+            multimask_output=False
+        )
+        best_mask = masks[0].astype(np.uint8)
+    else:
+        # Fallback: 5 kritik nokta
+        input_points = np.array([
+            [w // 2, h // 2],          # Merkez
+            [w // 2, int(h * 0.35)],   # Üst tavan / kaput
+            [w // 2, int(h * 0.65)],   # Alt tampon / gövde
+            [int(w * 0.30), h // 2],   # Sol kapı / çamurluk
+            [int(w * 0.70), h // 2],   # Sağ kapı / çamurluk
+        ], dtype=np.float32)
+        input_labels = np.array([1, 1, 1, 1, 1], dtype=np.int32)
+        masks, scores, _ = predictor.predict(
+            point_coords=input_points,
+            point_labels=input_labels,
+            multimask_output=True
+        )
+        best_mask = masks[np.argmax(scores)].astype(np.uint8)
 
     # Morfolojik temizleme: delikleri kapat ve kenarları pürüzsüzleştir
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))

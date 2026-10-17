@@ -130,70 +130,10 @@ def load_sam_model(checkpoint_path=None):
 
 
 # ----------------------------
-# SAM MASKE ÜRETİMİ
+# SAM MASKE ÜRETİMİ (YOLO Destekli Araç Kapsamı)
 # ----------------------------
-def get_car_mask(predictor, image_rgb):
-    """Görseldeki aracı arka plandan ayıran ikili maske üretir."""
-    h, w = image_rgb.shape[:2]
-    input_points = np.array([
-        [w // 2, h // 2],          # Merkez
-        [w // 2, int(h * 0.35)],   # Üst tavan / kaput
-        [w // 2, int(h * 0.65)],   # Alt tampon / gövde
-        [int(w * 0.30), h // 2],   # Sol kapı / çamurluk
-        [int(w * 0.70), h // 2],   # Sağ kapı / çamurluk
-    ], dtype=np.float32)
-    input_labels = np.array([1, 1, 1, 1, 1], dtype=np.int32)
+from seg import get_car_mask, generate_masks
 
-    predictor.set_image(image_rgb)
-    masks, scores, _ = predictor.predict(
-        point_coords=input_points,
-        point_labels=input_labels,
-        multimask_output=True
-    )
-    best_mask = masks[np.argmax(scores)].astype(np.uint8)
-
-    # Morfolojik temizleme
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-    best_mask = cv2.morphologyEx(best_mask, cv2.MORPH_CLOSE, kernel, iterations=3)
-    best_mask = cv2.morphologyEx(best_mask, cv2.MORPH_OPEN, kernel, iterations=2)
-
-    # En büyük bağlı bileşen (araç)
-    num_labels, labels_im = cv2.connectedComponents(best_mask)
-    if num_labels > 1:
-        sizes = np.bincount(labels_im.flatten())
-        sizes[0] = 0
-        best_mask = (labels_im == np.argmax(sizes)).astype(np.uint8)
-
-    return best_mask
-
-
-def generate_masks(image_files, masks_path, sam_predictor):
-    """Tüm fotoğraflar için SAM maskeleri üretir veya mevcudu yükler."""
-    print("Maskeler kontrol ediliyor / oluşturuluyor...")
-    os.makedirs(masks_path, exist_ok=True)
-    mask_files = []
-
-    for img_path in image_files:
-        base_name = os.path.splitext(os.path.basename(img_path))[0]
-        mask_path = os.path.join(masks_path, f"{base_name}_mask.png")
-
-        if os.path.exists(mask_path):
-            print(f"  Mevcut maske: {os.path.basename(mask_path)}")
-            mask_files.append(mask_path)
-            continue
-
-        image_bgr = cv2.imread(img_path)
-        if image_bgr is None:
-            print(f"❌ Görsel okunamadı: {img_path}")
-            continue
-
-        image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
-        mask = get_car_mask(sam_predictor, image_rgb)
-        cv2.imwrite(mask_path, mask * 255)
-        print(f"  Oluşturuldu: {os.path.basename(mask_path)}")
-        mask_files.append(mask_path)
-
-    return mask_files
 
 
 # ----------------------------
