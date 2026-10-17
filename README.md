@@ -9,6 +9,7 @@
 ![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-00FFFF?logo=yolo)
 ![Open3D](https://img.shields.io/badge/Open3D-3D%20Vision-blue)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-336791?logo=postgresql&logoColor=white)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 **Araç sahiplerinin fiziksel modifikasyon yapmadan önce görsel değişiklikleri (jant giydirme, kaporta boyama ve 3B modelleme) simüle edebilecekleri uçtan uca dijital stüdyo.**
 
@@ -29,6 +30,7 @@
 - [Ortam Değişkenleri (.env)](#-ortam-değişkenleri-env)
 - [API Dokümantasyonu ve Endpointler](#-api-dokümantasyonu-ve-endpointler)
 - [Sıkça Karşılaşılan Sorunlar (Troubleshooting)](#-sıkça-karşılaşılan-sorunlar-troubleshooting)
+- [Lisans](#-lisans)
 
 ---
 
@@ -318,6 +320,14 @@ Tüm endpoint'ler `/docs` adresinde Swagger UI ile interaktif olarak test edileb
    - Yeni kaydolan kullanıcılara otomatik 100 kredi verilir. Krediniz biterse Mağaza (`/store`) sekmesinden paket seçerek bakiye yükleyebilirsiniz.
 4. **3D Model Mobilde Görünmüyor**:
    - Backend `main.py` içinde GLB MIME tipi (`model/gltf-binary`) ve CORS ayarlarının açık olduğundan emin olun. Dosya yolu `/uploads/images_3d/scan_X/model_Y.glb` formatında erişilebilir olmalıdır.
+
+---
+
+## 📄 Lisans
+
+Bu proje **MIT Lisansı** altında lisanslanmıştır. Detaylar için [LICENSE](file:///d:/MODIFIAI/LICENSE) dosyasına göz atabilirsiniz.
+
+Copyright (c) 2026 **Emirhan Kar & Furkan Genç & Tevfik Üner**
 
 ---
 
