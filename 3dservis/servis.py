@@ -121,7 +121,7 @@ def main():
                         final_3d_dir = os.path.join("temp_3d_output", str(scan_id))
                         os.makedirs(final_3d_dir, exist_ok=True)
 
-                        from test5 import generate_3d_model
+                        from pipeline_3d import generate_3d_model
                         # generate_3d_model artık garantili path veya None döndürüyor
                         glb_path = generate_3d_model(
                             out_dir,
