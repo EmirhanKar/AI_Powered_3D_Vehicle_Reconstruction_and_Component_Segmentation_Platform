@@ -1,0 +1,65 @@
+services:
+  # ─────────────────────────────────────────────────────────────
+  # 1. PostgreSQL Veritabanı Servisi
+  # ─────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: modifai_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-modifai}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-modifai}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - modifai_network
+
+  # ─────────────────────────────────────────────────────────────
+  # 2. FastAPI Backend API Servisi
+  # ─────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: modifai_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DB_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-modifai}
+      MY_TOKEN: ${MY_TOKEN:-super_secret_jwt_key_123}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-ABCDEFGHIJKLMNOPRSTUVYZ123}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      BACKEND_PUBLIC_URL: ${BACKEND_PUBLIC_URL:-http://localhost:8000}
+      TRIPO_API_KEY: ${TRIPO_API_KEY:-}
+      TRIPO_BASE_URL: ${TRIPO_BASE_URL:-https://api.tripo3d.ai/v2/openapi}
+      TRIPO_MODE: ${TRIPO_MODE:-test}
+    volumes:
+      # Canlı kod geliştirme (Local değişiklikler anında konteynere yansır)
+      - ./Backend/app:/app/app
+      - ./Backend/alembic:/app/alembic
+      # Upload edilen araç resimleri ve GLB modelleri host ile eşitlenir
+      - ./Backend/uploads:/app/uploads
+      # Opsiyonel CNN araç tespit modeli
+      - ./CNN_Otonom_Arac_Tespiti:/CNN_Otonom_Arac_Tespiti:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - modifai_network
+
+networks:
+  modifai_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

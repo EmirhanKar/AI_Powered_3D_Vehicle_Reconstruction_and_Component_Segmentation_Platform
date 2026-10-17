@@ -153,9 +153,27 @@ MODIFIAI/
 
 ## 🛠 Kurulum ve Çalıştırma
 
-Projeyi çalıştırmak için 3 ayrı terminal penceresi açın:
+Projeyi çalıştırmanın en kolay ve önerilen yolu **Docker** kullanmaktır.
 
-### 1. Backend Servisi (FastAPI)
+### ⚡ Hızlı Başlangıç (Docker ile — Önerilen)
+
+PostgreSQL veritabanı ve FastAPI Backend tek bir komutla ayağa kalkar:
+
+```bash
+# Proje ana dizininde (MODIFIAI):
+docker compose up -d
+```
+
+- 🌐 **Swagger API Dokümantasyonu**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- 🗄 **PostgreSQL**: `localhost:5432` (Kullanıcı: `postgres`, Şifre: `postgres`, Veritabanı: `modifai`)
+- Konteynerleri durdurmak için: `docker compose down`
+- Logları canlı izlemek için: `docker compose logs -f`
+
+---
+
+### Alternatif: Manuel Kurulum (Docker Olmadan)
+
+#### 1. Backend Servisi (FastAPI)
 
 1. PostgreSQL servisini başlatın ve bir veritabanı oluşturun:
    ```sql
@@ -189,11 +207,7 @@ Projeyi çalıştırmak için 3 ayrı terminal penceresi açın:
    TRIPO_API_KEY="tsk_..."
    TRIPO_MODE="test"
    ```
-6. Veritabanı tablolarını migrate edin:
-   ```bash
-   alembic upgrade head
-   ```
-7. Sunucuyu başlatın:
+6. Sunucuyu başlatın:
    ```bash
    uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
    ```

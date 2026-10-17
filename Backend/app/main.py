@@ -35,11 +35,12 @@ async def weekly_score_reset_task():
             if os.path.exists(reset_file):
                 with open(reset_file, "r") as f:
                     content = f.read().strip()
-                try:
                     last_reset = datetime.fromisoformat(content)
+                    if last_reset.tzinfo is None:
+                        last_reset = last_reset.replace(tzinfo=timezone.utc)
                     if now - last_reset >= timedelta(days=7):
                         need_reset = True
-                except ValueError:
+                except Exception:
                     need_reset = True
             else:
                 need_reset = True

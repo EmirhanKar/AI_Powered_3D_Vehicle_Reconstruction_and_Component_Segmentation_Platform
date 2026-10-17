@@ -1,0 +1,15 @@
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.git
+**/.gitignore
+**/venv
+**/.venv
+Frontend/build
+Frontend/.dart_tool
+Frontend/.idea
+3dservis/venv
+3dservis/SAM
+3dservis/Depth-Anything-3
+Backend/venv
+Backend/uploads
