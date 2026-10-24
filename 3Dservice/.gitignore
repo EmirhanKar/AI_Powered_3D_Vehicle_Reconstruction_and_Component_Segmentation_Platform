@@ -1,0 +1,9 @@
+# 3Dservice working directories & local environment
+.env
+jobs/
+outputs/
+models/
+checkpoints/
+__pycache__/
+*.pyc
+.pytest_cache/
